@@ -11,7 +11,8 @@
     "start:prod": "node dist/main",
     "lint": "eslint \"{src,test}/**/*.ts\"",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev"
+    "prisma:migrate": "prisma migrate dev",
+    "test": "npx tsc -p tsconfig.build.json --incremental false && node --experimental-test-coverage --test --test-coverage-include=dist/venues/venue-rules.js --test-coverage-include=dist/venues/venues.service.js --test-coverage-lines=50 --test-coverage-branches=50 test/*.test.cjs"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.15",

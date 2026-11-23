@@ -16,3 +16,80 @@ h1 { max-width: 760px; font-size: clamp(2.2rem, 6vw, 4.5rem); line-height: 1.05;
 .feature-card p { color: #64748b; line-height: 1.6; }
 .site-footer { margin-top: auto; padding: 24px 5%; text-align: center; color: #64748b; }
 @media (max-width: 650px) { .site-header { align-items: flex-start; gap: 14px; flex-direction: column; } nav { flex-wrap: wrap; gap: 14px; } .feature-grid { grid-template-columns: 1fr; } .hero { padding: 48px 0; } }
+
+.management-page { padding: 42px 0 64px; }
+.management-heading, .venue-card-heading, .venue-list-heading, .courts-heading { display: flex; justify-content: space-between; align-items: center; gap: 18px; }
+.management-heading { margin-bottom: 24px; }
+.management-heading h1 { font-size: clamp(2rem, 5vw, 3.2rem); }
+.management-heading p:not(.eyebrow) { color: #64748b; line-height: 1.6; }
+.management-page h2 { margin: 0 0 18px; font-size: 1.35rem; }
+.management-page h3 { margin: 0; font-size: 1.1rem; }
+.management-card { background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 24px; box-shadow: 0 8px 24px #17212b0a; }
+.venue-form { margin-bottom: 36px; }
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.management-page label { display: grid; gap: 7px; color: #334155; font-size: .9rem; font-weight: 650; }
+.management-page input:not([type="checkbox"]), .management-page textarea, .management-page select { width: 100%; padding: 10px 12px; color: #17212b; font: inherit; background: white; border: 1px solid #cbd5e1; border-radius: 8px; }
+.management-page input:focus, .management-page textarea:focus, .management-page select:focus { outline: 3px solid #0f766e24; border-color: #0f766e; }
+.management-page textarea { resize: vertical; }
+.form-wide { grid-column: 1 / -1; }
+.hours-fieldset { margin: 22px 0 0; padding: 16px; border: 1px solid #e2e8f0; border-radius: 10px; }
+.hours-fieldset legend { padding: 0 6px; font-weight: 750; }
+.hours-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 24px; }
+.hours-row { display: grid; grid-template-columns: 74px 72px 1fr 22px 1fr; align-items: center; gap: 8px; font-size: .85rem; }
+.hours-row input[type="time"] { min-width: 0; padding: 7px; }
+.closed-toggle { display: flex !important; align-items: center; gap: 4px !important; font-size: .8rem !important; }
+.form-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.venue-form > .form-actions { margin-top: 20px; }
+.button { padding: 9px 14px; border: 1px solid #0f766e; border-radius: 8px; background: #0f766e; color: white; font: inherit; font-size: .86rem; font-weight: 700; cursor: pointer; }
+.button:hover { background: #115e59; }
+.button:disabled { opacity: .6; cursor: wait; }
+.button-secondary { background: white; color: #334155; border-color: #cbd5e1; }
+.button-secondary:hover { background: #f1f5f9; }
+.button-danger { background: white; color: #b91c1c; border-color: #fecaca; }
+.button-danger:hover { background: #fef2f2; }
+.alert { margin: 14px 0; padding: 12px 16px; border-radius: 9px; }
+.alert-error { color: #991b1b; background: #fef2f2; border: 1px solid #fecaca; }
+.alert-success { color: #166534; background: #f0fdf4; border: 1px solid #bbf7d0; }
+.venue-list-heading { margin-bottom: 16px; }
+.venue-list-heading h2 { margin: 0; }
+.venue-list-heading span, .empty-state, .field-hint { color: #64748b; }
+.managed-venues { display: grid; gap: 18px; }
+.venue-card { min-width: 0; }
+.venue-card.is-inactive { opacity: .77; }
+.venue-card-heading { align-items: flex-start; }
+.venue-card-heading h2 { margin: 8px 0 4px; }
+.venue-card-heading p { margin: 0; color: #64748b; }
+.status-pill { display: inline-flex; width: fit-content; padding: 4px 8px; border-radius: 999px; background: #f1f5f9; color: #475569; font-size: .75rem; font-weight: 700; }
+.status-active { color: #166534; background: #dcfce7; }
+.tag-list { display: flex; flex-wrap: wrap; gap: 7px; }
+.sport-tag { padding: 5px 9px; background: #ecfdf5; border-radius: 999px; color: #0f766e; font-size: .8rem; font-weight: 650; }
+.venue-image { width: min(100%, 480px); max-height: 240px; margin: 6px 0 14px; object-fit: cover; border-radius: 10px; }
+.hours-summary { display: flex; flex-wrap: wrap; gap: 8px 16px; padding: 14px 0; color: #475569; font-size: .83rem; }
+.courts-heading { padding: 14px 0 8px; border-top: 1px solid #e2e8f0; }
+.court-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 14px 0; border-top: 1px solid #f1f5f9; }
+.court-information { display: grid; gap: 5px; }
+.court-information > span { color: #64748b; font-size: .87rem; }
+.price-list { display: grid; gap: 4px; color: #475569; font-size: .82rem; }
+.text-button { padding: 2px 6px; border: 0; background: transparent; color: #b91c1c; font: inherit; font-weight: 650; cursor: pointer; }
+.add-court-button { margin-top: 12px; }
+.modal-backdrop { position: fixed; z-index: 10; inset: 0; display: grid; place-items: center; padding: 20px; background: #0f172a88; }
+.modal-card { display: grid; width: min(100%, 520px); max-height: min(90vh, 760px); gap: 16px; overflow-y: auto; }
+.maintenance-control { position: relative; }
+.maintenance-popover { position: absolute; z-index: 2; top: calc(100% + 8px); right: 0; display: grid; width: min(340px, 85vw); gap: 12px; padding: 16px; background: white; border: 1px solid #cbd5e1; border-radius: 12px; box-shadow: 0 12px 32px #0f172a24; }
+.maintenance-popover form { display: grid; gap: 10px; }
+.maintenance-period { display: flex; justify-content: space-between; gap: 8px; padding-top: 8px; border-top: 1px solid #e2e8f0; color: #475569; font-size: .8rem; }
+.field-hint { margin: 0; font-size: .85rem; }
+.approval-card { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.approval-card h2 { margin: 0 0 5px; }
+.approval-card p { margin: 0 0 5px; color: #475569; }
+@media (max-width: 760px) {
+  .management-page { padding-top: 28px; }
+  .management-heading, .venue-card-heading, .court-row { align-items: flex-start; flex-direction: column; }
+  .management-heading { gap: 4px; }
+  .form-grid, .hours-list { grid-template-columns: 1fr; }
+  .form-wide { grid-column: auto; }
+  .hours-row { grid-template-columns: 68px 60px 1fr 18px 1fr; gap: 5px; }
+  .hours-row input[type="time"] { font-size: .82rem; }
+  .court-row > .form-actions { align-items: flex-start; }
+  .approval-card { align-items: flex-start; flex-direction: column; }
+}
