@@ -169,7 +169,7 @@ export class VenuesService {
       dto.openingHours === undefined
         ? undefined
         : openingHourRecords(dto.openingHours);
-    const { openingHours: _openingHours, ...fields } = dto;
+    const fields = dto;
     const data: Prisma.VenueUpdateInput = {
       ...(fields.name !== undefined ? { name: fields.name.trim() } : {}),
       ...(fields.address !== undefined

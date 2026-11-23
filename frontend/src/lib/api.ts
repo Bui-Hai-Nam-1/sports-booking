@@ -5,3 +5,19 @@ export const api = axios.create({
   timeout: 10000,
   headers: { 'Content-Type': 'application/json' },
 });
+
+api.interceptors.response.use(
+  (response) => {
+    if (
+      typeof response.data === 'object'
+      && response.data !== null
+      && 'success' in response.data
+      && response.data.success === true
+      && 'data' in response.data
+    ) {
+      return { ...response, data: response.data.data };
+    }
+    return response;
+  },
+  (error: unknown) => Promise.reject(error),
+);
