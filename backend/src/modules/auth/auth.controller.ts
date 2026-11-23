@@ -15,6 +15,8 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -87,5 +89,16 @@ export class AuthController {
     return {
       message: 'Bạn có quyền ADMIN!',
     };
+  }
+    // Yêu cầu gửi email đặt lại mật khẩu
+  @Post('forgot-password')
+  forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto);
+  }
+
+  // Đặt lại mật khẩu bằng token
+  @Post('reset-password')
+  resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto);
   }
 }

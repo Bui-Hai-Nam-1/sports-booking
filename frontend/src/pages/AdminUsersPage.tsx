@@ -1,9 +1,10 @@
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 import axios from 'axios';
 import api from '../lib/api';
 import type { UserRole } from '../features/auth/authSlice';
-import { Link } from 'react-router-dom';
+
 interface AdminUser {
   id: string;
   fullName: string;
@@ -19,15 +20,19 @@ interface ApiMessage {
   user: AdminUser;
 }
 
+type RoleFilter = 'ALL' | UserRole;
+type StatusFilter = 'ALL' | 'ACTIVE' | 'INACTIVE';
+
 export function AdminUsersPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [keyword, setKeyword] = useState('');
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>('ALL');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
-  // Lấy danh sách người dùng
   const fetchUsers = async (searchKeyword = '') => {
     setLoading(true);
     setError('');
@@ -51,14 +56,29 @@ export function AdminUsersPage() {
     void fetchUsers();
   }, []);
 
-  // Tìm kiếm người dùng
+  const filteredUsers = useMemo(() => {
+    return users.filter((user) => {
+      const matchesRole =
+        roleFilter === 'ALL' || user.role === roleFilter;
+
+      const matchesStatus =
+        statusFilter === 'ALL' ||
+        (statusFilter === 'ACTIVE' && user.isActive) ||
+        (statusFilter === 'INACTIVE' && !user.isActive);
+
+      return matchesRole && matchesStatus;
+    });
+  }, [users, roleFilter, statusFilter]);
+
+  const activeCount = users.filter((user) => user.isActive).length;
+  const inactiveCount = users.length - activeCount;
+
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setMessage('');
     void fetchUsers(keyword);
   };
 
-  // Đổi vai trò
   const handleRoleChange = async (
     userId: string,
     role: 'CUSTOMER' | 'OWNER',
@@ -84,12 +104,12 @@ export function AdminUsersPage() {
       setMessage(response.data.message);
     } catch (err) {
       setError(getErrorMessage(err));
+      void fetchUsers(keyword);
     } finally {
       setUpdatingId(null);
     }
   };
 
-  // Khóa hoặc mở khóa tài khoản
   const handleStatusChange = async (user: AdminUser) => {
     const nextStatus = !user.isActive;
 
@@ -122,6 +142,7 @@ export function AdminUsersPage() {
       setMessage(response.data.message);
     } catch (err) {
       setError(getErrorMessage(err));
+      void fetchUsers(keyword);
     } finally {
       setUpdatingId(null);
     }
@@ -138,166 +159,249 @@ export function AdminUsersPage() {
     return 'Không thể kết nối đến máy chủ.';
   }
 
+  function resetFilters() {
+    setKeyword('');
+    setRoleFilter('ALL');
+    setStatusFilter('ALL');
+    setMessage('');
+    void fetchUsers();
+  }
+
   return (
-    <div className="admin-users-page">
-      <div className="admin-users-header">
+    <div className="sb-users-page">
+      <div className="sb-users-heading">
         <div>
+          <span className="sb-page-eyebrow">QUẢN TRỊ HỆ THỐNG</span>
           <h1>Quản lý người dùng</h1>
-          <p>Quản lý tài khoản và phân quyền người dùng.</p>
+          <p>Quản lý tài khoản, vai trò và trạng thái người dùng.</p>
         </div>
 
-        <div className="admin-users-count">
-          Tổng số: <strong>{users.length}</strong> người dùng
+        <div className="sb-users-heading-count">
+          <span>Tổng người dùng</span>
+          <strong>{users.length}</strong>
         </div>
       </div>
 
-      <form className="admin-search-form" onSubmit={handleSearch}>
-        <input
-          type="text"
-          value={keyword}
-          onChange={(event) => setKeyword(event.target.value)}
-          placeholder="Nhập tên hoặc email người dùng..."
-        />
-
-        <button type="submit" disabled={loading}>
-          Tìm kiếm
-        </button>
-
-        <button
-          type="button"
-          className="admin-reset-button"
-          onClick={() => {
-            setKeyword('');
-            setMessage('');
-            void fetchUsers();
-          }}
-        >
-          Làm mới
-        </button>
-      </form>
-
-      {message && (
-        <div className="admin-message success">
-          {message}
+      <div className="sb-users-stats">
+        <div className="sb-users-stat-card">
+          <div className="sb-users-stat-icon">♙</div>
+          <div>
+            <span>Tổng tài khoản</span>
+            <strong>{users.length}</strong>
+          </div>
         </div>
-      )}
 
-      {error && (
-        <div className="admin-message error">
-          {error}
+        <div className="sb-users-stat-card">
+          <div className="sb-users-stat-icon green">✓</div>
+          <div>
+            <span>Đang hoạt động</span>
+            <strong>{activeCount}</strong>
+          </div>
         </div>
-      )}
 
-      {loading ? (
-        <p className="admin-loading">Đang tải danh sách người dùng...</p>
-      ) : users.length === 0 ? (
-        <p className="admin-empty">Không tìm thấy người dùng.</p>
-      ) : (
-        <div className="admin-table-wrapper">
-          <table className="admin-users-table">
-            <thead>
-              <tr>
-                <th>Họ và tên</th>
-                <th>Email</th>
-                <th>Vai trò</th>
-                <th>Trạng thái</th>
-                <th>Ngày tạo</th>
-                <th>Thao tác</th>
-              </tr>
-            </thead>
+        <div className="sb-users-stat-card">
+          <div className="sb-users-stat-icon orange">!</div>
+          <div>
+            <span>Đã khóa</span>
+            <strong>{inactiveCount}</strong>
+          </div>
+        </div>
+      </div>
 
-            <tbody>
-              {users.map((user) => (
-                <tr key={user.id}>
-                  <td>{user.fullName}</td>
-                  <td>{user.email}</td>
+      <section className="sb-users-panel">
+        <div className="sb-users-panel-heading">
+          <div>
+            <h2>Danh sách tài khoản</h2>
+            <p>Tìm kiếm và quản lý tài khoản trong hệ thống.</p>
+          </div>
+          <span className="sb-users-result-count">
+            {filteredUsers.length} kết quả
+          </span>
+        </div>
 
-                  <td>
-                    <select
-                      value={user.role}
-                      disabled={updatingId === user.id}
-                      onChange={(event) =>
-                        handleRoleChange(
-                          user.id,
-                          event.target.value as 'CUSTOMER' | 'OWNER',
-                        )
-                      }
-                    >
-                      {user.role === 'ADMIN' && (
-                        <option value="ADMIN" disabled>
-                          ADMIN
-                        </option>
-                      )}
+        <form className="sb-users-toolbar" onSubmit={handleSearch}>
+          <div className="sb-users-search">
+            <span aria-hidden="true">⌕</span>
+            <input
+              type="text"
+              value={keyword}
+              onChange={(event) => setKeyword(event.target.value)}
+              placeholder="Tìm theo tên hoặc email..."
+              aria-label="Tìm theo tên hoặc email"
+            />
+          </div>
 
-                      <option value="CUSTOMER">CUSTOMER</option>
-                      <option value="OWNER">OWNER</option>
-                    </select>
-                  </td>
+          <select
+            value={roleFilter}
+            onChange={(event) =>
+              setRoleFilter(event.target.value as RoleFilter)
+            }
+            aria-label="Lọc theo vai trò"
+          >
+            <option value="ALL">Tất cả vai trò</option>
+            <option value="CUSTOMER">Customer</option>
+            <option value="OWNER">Owner</option>
+            <option value="ADMIN">Admin</option>
+          </select>
 
-                  <td>
-                    <span
-                      className={
-                        user.isActive
-                          ? 'admin-status active'
-                          : 'admin-status inactive'
-                      }
-                    >
-                      {user.isActive ? 'Hoạt động' : 'Đã khóa'}
-                    </span>
-                  </td>
+          <select
+            value={statusFilter}
+            onChange={(event) =>
+              setStatusFilter(event.target.value as StatusFilter)
+            }
+            aria-label="Lọc theo trạng thái"
+          >
+            <option value="ALL">Tất cả trạng thái</option>
+            <option value="ACTIVE">Đang hoạt động</option>
+            <option value="INACTIVE">Đã khóa</option>
+          </select>
 
-                  <td>
-                    {new Date(user.createdAt).toLocaleDateString('vi-VN')}
-                  </td>
+          <button
+            type="submit"
+            className="sb-users-search-button"
+            disabled={loading}
+          >
+            Tìm kiếm
+          </button>
 
-                  <td>
-  <div className="admin-action-buttons">
-    <button
-      type="button"
-      className={
-        user.isActive
-          ? 'admin-lock-button'
-          : 'admin-unlock-button'
-      }
-      disabled={updatingId === user.id}
-      onClick={() => handleStatusChange(user)}
-    >
-      {updatingId === user.id
-        ? 'Đang xử lý...'
-        : user.isActive
-          ? 'Khóa'
-          : 'Mở khóa'}
-    </button>
+          <button
+            type="button"
+            className="sb-users-reset-button"
+            onClick={resetFilters}
+            disabled={loading}
+          >
+            Làm mới
+          </button>
+        </form>
 
-    <Link
-      to={`/admin/users/${user.id}`}
-      className="admin-detail-link"
-      title="Xem chi tiết"
-      aria-label={`Xem chi tiết ${user.fullName}`}
-    >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="22"
-        height="22"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z" />
-        <circle cx="12" cy="12" r="3" />
-      </svg>
-    </Link>
-  </div>
-</td>
+        {message && (
+          <div className="sb-users-alert success" role="status">
+            <span>✓</span> {message}
+          </div>
+        )}
+
+        {error && (
+          <div className="sb-users-alert error" role="alert">
+            {error}
+          </div>
+        )}
+
+        {loading ? (
+          <div className="sb-users-empty">
+            <span className="sb-users-spinner" />
+            <p>Đang tải danh sách người dùng...</p>
+          </div>
+        ) : filteredUsers.length === 0 ? (
+          <div className="sb-users-empty">
+            <span className="sb-users-empty-icon">⌕</span>
+            <strong>Không tìm thấy người dùng</strong>
+            <p>Thử thay đổi từ khóa hoặc bộ lọc của bạn.</p>
+            <button type="button" onClick={resetFilters}>
+              Xóa bộ lọc
+            </button>
+          </div>
+        ) : (
+          <div className="sb-users-table-wrap">
+            <table className="sb-users-table">
+              <thead>
+                <tr>
+                  <th>NGƯỜI DÙNG</th>
+                  <th>VAI TRÒ</th>
+                  <th>TRẠNG THÁI</th>
+                  <th>NGÀY TẠO</th>
+                  <th>THAO TÁC</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              </thead>
+
+              <tbody>
+                {filteredUsers.map((user) => (
+                  <tr key={user.id}>
+                    <td>
+                      <div className="sb-users-person">
+                        <div className="sb-users-person-avatar">
+                          {user.fullName.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="sb-users-person-info">
+                          <strong>{user.fullName}</strong>
+                          <span>{user.email}</span>
+                        </div>
+                      </div>
+                    </td>
+
+                    <td>
+                      <select
+                        className="sb-users-role-select"
+                        value={user.role}
+                        disabled={
+                          updatingId === user.id || user.role === 'ADMIN'
+                        }
+                        onChange={(event) =>
+                          handleRoleChange(
+                            user.id,
+                            event.target.value as 'CUSTOMER' | 'OWNER',
+                          )
+                        }
+                        aria-label={`Vai trò của ${user.fullName}`}
+                      >
+                        {user.role === 'ADMIN' && (
+                          <option value="ADMIN">ADMIN</option>
+                        )}
+                        <option value="CUSTOMER">CUSTOMER</option>
+                        <option value="OWNER">OWNER</option>
+                      </select>
+                    </td>
+
+                    <td>
+                      <span
+                        className={`sb-users-status ${
+                          user.isActive ? 'active' : 'inactive'
+                        }`}
+                      >
+                        <span />
+                        {user.isActive ? 'Hoạt động' : 'Đã khóa'}
+                      </span>
+                    </td>
+
+                    <td>
+                      <span className="sb-users-date">
+                        {new Date(user.createdAt).toLocaleDateString('vi-VN')}
+                      </span>
+                    </td>
+
+                    <td>
+                      <div className="sb-users-actions">
+                        <button
+                          type="button"
+                          className={`sb-users-status-button ${
+                            user.isActive ? 'lock' : 'unlock'
+                          }`}
+                          disabled={updatingId === user.id}
+                          onClick={() => void handleStatusChange(user)}
+                        >
+                          {updatingId === user.id
+                            ? 'Đang xử lý...'
+                            : user.isActive
+                              ? 'Khóa'
+                              : 'Mở khóa'}
+                        </button>
+
+                        <Link
+                          to={`/admin/users/${user.id}`}
+                          className="sb-users-view-link"
+                          aria-label={`Xem chi tiết ${user.fullName}`}
+                          title="Xem chi tiết"
+                        >
+                          Xem
+                        </Link>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
     </div>
   );
 }

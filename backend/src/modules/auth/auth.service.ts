@@ -4,6 +4,8 @@ import {
   Injectable,
   UnauthorizedException,
   NotFoundException,
+  BadRequestException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 
 import { JwtService } from '@nestjs/jwt';
@@ -13,6 +15,11 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { randomBytes, createHash } from 'crypto';
+import { MailService } from './mail.service';
+
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 
 import * as bcrypt from 'bcrypt';
 
@@ -21,6 +28,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
+    private readonly mailService: MailService,
   ) {}
 
   // Đăng ký tài khoản
@@ -225,4 +233,134 @@ async login(dto: LoginDto) {
       message: 'Đổi mật khẩu thành công',
     };
   }
+
+  // Yêu cầu đặt lại mật khẩu
+  async forgotPassword(dto: ForgotPasswordDto) {
+    const email = dto.email.trim().toLowerCase();
+
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        isActive: true,
+      },
+    });
+
+    // Không tiết lộ email có tồn tại hay không
+    const response = {
+      message:
+        'Nếu email tồn tại, hệ thống sẽ gửi liên kết đặt lại mật khẩu.',
+    };
+
+    if (!user || !user.isActive) {
+      return response;
+    }
+
+    // Tạo token ngẫu nhiên, chỉ lưu mã băm vào database
+    const token = randomBytes(32).toString('hex');
+
+    const tokenHash = createHash('sha256')
+      .update(token)
+      .digest('hex');
+
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordResetTokenHash: tokenHash,
+        passwordResetExpiresAt: expiresAt,
+      },
+    });
+
+    const frontendUrl =
+      process.env.FRONTEND_URL || 'http://localhost:5173';
+
+    const resetUrl =
+      `${frontendUrl}/reset-password?token=${token}`;
+
+    try {
+      await this.mailService.sendPasswordResetEmail(
+        user.email,
+        user.fullName,
+        resetUrl,
+      );
+    } catch {
+      // Không giữ token nếu gửi email thất bại
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          passwordResetTokenHash: null,
+          passwordResetExpiresAt: null,
+        },
+      });
+
+      throw new InternalServerErrorException(
+        'Không thể gửi email đặt lại mật khẩu. Vui lòng thử lại sau.',
+      );
+    }
+
+    return response;
+  }
+
+  // Đặt lại mật khẩu bằng token
+  async resetPassword(dto: ResetPasswordDto) {
+    const tokenHash = createHash('sha256')
+      .update(dto.token)
+      .digest('hex');
+
+    const user = await this.prisma.user.findFirst({
+      where: {
+        passwordResetTokenHash: tokenHash,
+        passwordResetExpiresAt: {
+          gt: new Date(),
+        },
+        isActive: true,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!user) {
+      throw new BadRequestException(
+        'Liên kết không hợp lệ hoặc đã hết hạn.',
+      );
+    }
+
+    const hashedPassword = await bcrypt.hash(
+      dto.newPassword,
+      12,
+    );
+
+    // Chỉ cho phép sử dụng token một lần
+    const result = await this.prisma.user.updateMany({
+      where: {
+        id: user.id,
+        passwordResetTokenHash: tokenHash,
+        passwordResetExpiresAt: {
+          gt: new Date(),
+        },
+        isActive: true,
+      },
+      data: {
+        password: hashedPassword,
+        passwordResetTokenHash: null,
+        passwordResetExpiresAt: null,
+      },
+    });
+
+    if (result.count !== 1) {
+      throw new BadRequestException(
+        'Liên kết không hợp lệ hoặc đã hết hạn.',
+      );
+    }
+
+    return {
+      message: 'Đặt lại mật khẩu thành công. Vui lòng đăng nhập lại.',
+    };
+  }
+
 }
