@@ -8,6 +8,7 @@ export function AppLayout() {
         <nav aria-label="Điều hướng chính">
           <Link to="/">Trang chủ</Link>
           <a href="#courts">Tìm sân</a>
+          <Link to="/owner/venues">Quản lý sân</Link>
           <a href="#login">Đăng nhập</a>
         </nav>
       </header>

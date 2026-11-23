@@ -16,3 +16,61 @@ h1 { max-width: 760px; font-size: clamp(2.2rem, 6vw, 4.5rem); line-height: 1.05;
 .feature-card p { color: #64748b; line-height: 1.6; }
 .site-footer { margin-top: auto; padding: 24px 5%; text-align: center; color: #64748b; }
 @media (max-width: 650px) { .site-header { align-items: flex-start; gap: 14px; flex-direction: column; } nav { flex-wrap: wrap; gap: 14px; } .feature-grid { grid-template-columns: 1fr; } .hero { padding: 48px 0; } }
+
+.management-page { padding: 42px 0 64px; }
+.management-page h1 { font-size: clamp(2rem, 4vw, 3rem); }
+.page-intro { color: #64748b; margin: 0 0 28px; }
+.management-grid { display: grid; grid-template-columns: minmax(270px, .75fr) minmax(0, 1.65fr); align-items: start; gap: 22px; }
+.panel { background: white; padding: 22px; border: 1px solid #e2e8f0; border-radius: 14px; margin-bottom: 18px; }
+.panel h2, .panel h3 { margin-top: 0; }
+.panel h2 { font-size: 1.2rem; }
+.panel h3 { margin: 26px 0 14px; font-size: 1rem; }
+.panel-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.panel-heading h2 { margin-bottom: 16px; }
+.venue-list { display: grid; gap: 8px; margin: 14px 0; }
+.venue-choice { display: grid; gap: 4px; width: 100%; padding: 12px; text-align: left; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 9px; cursor: pointer; }
+.venue-choice.selected { border-color: #0f766e; background: #f0fdfa; }
+.venue-choice span, .venue-choice small { color: #64748b; }
+.status { display: inline-flex; align-items: center; padding: 4px 8px; border-radius: 999px; font-size: .72rem; font-weight: 700; }
+.status-pending { color: #92400e; background: #fef3c7; }
+.status-approved { color: #166534; background: #dcfce7; }
+.status-rejected { color: #991b1b; background: #fee2e2; }
+.form-stack { display: grid; gap: 12px; }
+.form-stack label, .inline-form label, .court-picker { display: grid; gap: 6px; font-size: .88rem; font-weight: 600; }
+.form-stack input, .form-stack textarea, .inline-form input, .inline-form select, .court-picker select, .hour-row input[type="time"] { width: 100%; padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 7px; background: white; color: #17212b; font: inherit; }
+.button { border: 0; border-radius: 7px; padding: 9px 12px; font: inherit; font-size: .85rem; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.button:disabled { opacity: .6; cursor: wait; }
+.button-primary { background: #0f766e; color: white; }
+.button-muted { background: #e2e8f0; color: #334155; }
+.button-danger { background: #fee2e2; color: #991b1b; }
+.empty-state { color: #64748b; padding: 32px; text-align: center; }
+.notice, .error-message { padding: 11px 14px; border-radius: 8px; margin: 0 0 16px; }
+.notice { color: #166534; background: #dcfce7; }
+.error-message { color: #991b1b; background: #fee2e2; }
+.tabs-list { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 14px; border-bottom: 1px solid #e2e8f0; }
+.tab-trigger { padding: 11px 13px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: #475569; font: inherit; cursor: pointer; white-space: nowrap; }
+.tab-trigger[aria-selected="true"] { border-color: #0f766e; color: #0f766e; font-weight: 700; }
+.court-list, .rule-list { display: grid; gap: 10px; margin-bottom: 18px; }
+.court-row, .rule-row, .approval-row { display: flex; align-items: center; gap: 10px; padding: 12px 0; border-bottom: 1px solid #e2e8f0; }
+.court-select { display: grid; flex: 1; gap: 3px; border: 0; background: transparent; text-align: left; cursor: pointer; }
+.court-select span, .court-select small { color: #64748b; }
+.rule-row > span { flex: 1; color: #475569; line-height: 1.5; }
+.inline-form { display: flex; align-items: end; flex-wrap: wrap; gap: 12px; margin-top: 18px; }
+.inline-form label { flex: 1 1 135px; }
+.hours-grid { display: grid; gap: 10px; margin-bottom: 18px; }
+.hour-row { display: grid; grid-template-columns: 1fr minmax(100px, 140px) minmax(100px, 140px) auto; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f1f5f9; }
+.checkbox-label { display: flex; gap: 6px; align-items: center; font-size: .84rem; }
+.court-picker { max-width: 360px; margin: 12px 0 18px; }
+.admin-approvals { margin-top: 24px; }
+.approval-row > div { display: grid; flex: 1; gap: 4px; }
+.approval-row span { color: #64748b; }
+
+@media (max-width: 850px) { .management-grid { grid-template-columns: 1fr; } .venue-sidebar { order: 0; } }
+@media (max-width: 560px) {
+  .management-page { padding-top: 28px; }
+  .panel { padding: 16px; }
+  .hour-row { grid-template-columns: 1fr 1fr; }
+  .hour-row strong { grid-column: 1 / -1; }
+  .court-row, .rule-row, .approval-row { flex-wrap: wrap; }
+  .court-row .court-select, .rule-row > span, .approval-row > div { flex-basis: 100%; }
+}
