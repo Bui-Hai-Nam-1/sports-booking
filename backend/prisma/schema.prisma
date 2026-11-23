@@ -21,12 +21,25 @@ enum BookingStatus {
   REJECTED
 }
 
+enum VenueStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum PricingType {
+  STANDARD
+  WEEKEND
+  PEAK
+}
+
 model User {
   id        String   @id @default(cuid())
   fullName  String
   email     String   @unique
   password  String
   role      UserRole @default(CUSTOMER)
+  isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -36,47 +49,102 @@ model User {
 }
 
 model Venue {
-  id          String   @id @default(cuid())
+  id          String      @id @default(cuid())
   name        String
   address     String
   description String?
+  imageUrls   String[]    @default([])
+  sportTypes  String[]    @default([])
+  status      VenueStatus @default(PENDING)
+  isActive    Boolean     @default(true)
   ownerId     String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 
-  owner       User     @relation(fields: [ownerId], references: [id])
-  courts      Court[]
+  owner        User               @relation(fields: [ownerId], references: [id])
+  courts       Court[]
+  openingHours VenueOpeningHour[]
+
+  @@index([status, isActive])
 }
 
 model Court {
-  id          String   @id @default(cuid())
-  name        String
-  sportType   String
-  isActive    Boolean  @default(true)
-  venueId     String
-  createdAt   DateTime @default(now())
+  id        String   @id @default(cuid())
+  name      String
+  sportType String
+  isActive  Boolean  @default(true)
+  venueId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  venue       Venue    @relation(fields: [venueId], references: [id])
-  bookings    Booking[]
-  reviews     Review[]
+  venue             Venue              @relation(fields: [venueId], references: [id])
+  bookings          Booking[]
+  reviews           Review[]
+  pricingRules      PricingRule[]
+  maintenanceBlocks MaintenanceBlock[]
+
+  @@index([venueId, isActive, sportType])
+}
+
+model VenueOpeningHour {
+  id       String  @id @default(cuid())
+  weekday  Int
+  opensAt  String
+  closesAt String
+  isClosed Boolean @default(false)
+  venueId  String
+  venue    Venue   @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  @@unique([venueId, weekday])
+}
+
+model PricingRule {
+  id           String      @id @default(cuid())
+  type         PricingType
+  pricePerHour Decimal     @db.Decimal(12, 2)
+  weekday      Int?
+  startsAt     String
+  endsAt       String
+  courtId      String
+  court        Court       @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  createdAt    DateTime    @default(now())
+
+  @@index([courtId, type, weekday])
+}
+
+model MaintenanceBlock {
+  id        String   @id @default(cuid())
+  startAt   DateTime
+  endAt     DateTime
+  reason    String
+  courtId   String
+  court     Court    @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([courtId, startAt, endAt])
 }
 
 model Booking {
-  id        String        @id @default(cuid())
-  startAt   DateTime
-  endAt     DateTime
-  totalPrice Decimal      @db.Decimal(12, 2)
-  status    BookingStatus @default(PENDING)
-  userId    String
-  courtId   String
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+  id            String        @id @default(cuid())
+  startAt       DateTime
+  endAt         DateTime
+  totalPrice    Decimal       @db.Decimal(12, 2)
+  status        BookingStatus @default(PENDING)
+  notes         String?
+  cancelReason  String?
+  cancelledAt   DateTime?
+  cancelledById String?
+  userId        String
+  courtId       String
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
-  user      User          @relation(fields: [userId], references: [id])
-  court     Court          @relation(fields: [courtId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+  court Court @relation(fields: [courtId], references: [id])
 
   @@index([courtId, startAt, endAt])
   @@index([userId, createdAt])
+  @@index([status, startAt])
 }
 
 model Review {
@@ -87,8 +155,8 @@ model Review {
   courtId   String
   createdAt DateTime @default(now())
 
-  user      User     @relation(fields: [userId], references: [id])
-  court     Court    @relation(fields: [courtId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+  court Court @relation(fields: [courtId], references: [id])
 
   @@unique([userId, courtId])
 }
