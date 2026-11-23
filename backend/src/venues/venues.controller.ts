@@ -1,198 +1,116 @@
 import {
   Body,
   Controller,
-  Delete,
   Get,
   Param,
   Patch,
   Post,
-  Query,
+  Put,
+  Req,
   UseGuards,
+  Delete,
 } from '@nestjs/common';
-import {
-  CurrentUser,
-  AuthenticatedUser,
-} from '../common/auth/authenticated-user';
-import { Roles } from '../common/auth/roles.decorator';
+import { Request } from 'express';
+import { Roles, AppRole } from '../common/auth/roles.decorator';
 import { RolesGuard } from '../common/auth/roles.guard';
-import {
-  CreateCourtDto,
-  CreateMaintenanceDto,
-  CreatePriceRuleDto,
-  CreateVenueDto,
-  OwnerApprovalDto,
-  SearchVenuesQueryDto,
-  UpdateCourtDto,
-  UpdatePriceRuleDto,
-  UpdateVenueDto,
-} from './venues.dto';
+import { CreateCourtDto } from './dto/court.dto';
+import { CreateVenueDto, SetOpeningHoursDto, UpdateVenueDto } from './dto/venue.dto';
+import { VenueApprovalDto } from './dto/venue-approval.dto';
 import { VenuesService } from './venues.service';
 
-@Controller()
-export class VenuesController {
-  constructor(private readonly venuesService: VenuesService) {}
-
-  @Get('venues')
-  listPublic(@Query() query: SearchVenuesQueryDto) {
-    return this.venuesService.listPublic(query);
-  }
-
-  @Get('venues/mine')
-  @UseGuards(RolesGuard)
-  @Roles('OWNER', 'ADMIN')
-  listOwned(@CurrentUser() user: AuthenticatedUser) {
-    return this.venuesService.listOwned(user);
-  }
-
-  @Get('venues/:venueId')
-  getPublicVenue(@Param('venueId') venueId: string) {
-    return this.venuesService.getPublicVenue(venueId);
-  }
-
-  @Post('venues')
-  @UseGuards(RolesGuard)
-  @Roles('OWNER')
-  createVenue(
-    @CurrentUser() user: AuthenticatedUser,
-    @Body() dto: CreateVenueDto,
-  ) {
-    return this.venuesService.createVenue(user, dto);
-  }
-
-  @Patch('venues/:venueId')
-  @UseGuards(RolesGuard)
-  @Roles('OWNER', 'ADMIN')
-  updateVenue(
-    @Param('venueId') venueId: string,
-    @CurrentUser() user: AuthenticatedUser,
-    @Body() dto: UpdateVenueDto,
-  ) {
-    return this.venuesService.updateVenue(venueId, user, dto);
-  }
-
-  @Delete('venues/:venueId')
-  @UseGuards(RolesGuard)
-  @Roles('OWNER', 'ADMIN')
-  deactivateVenue(
-    @Param('venueId') venueId: string,
-    @CurrentUser() user: AuthenticatedUser,
-  ) {
-    return this.venuesService.deactivateVenue(venueId, user);
-  }
-
-  @Post('venues/:venueId/courts')
-  @UseGuards(RolesGuard)
-  @Roles('OWNER', 'ADMIN')
-  createCourt(
-    @Param('venueId') venueId: string,
-    @CurrentUser() user: AuthenticatedUser,
-    @Body() dto: CreateCourtDto,
-  ) {
-    return this.venuesService.createCourt(venueId, user, dto);
-  }
-
-  @Patch('courts/:courtId')
-  @UseGuards(RolesGuard)
-  @Roles('OWNER', 'ADMIN')
-  updateCourt(
-    @Param('courtId') courtId: string,
-    @CurrentUser() user: AuthenticatedUser,
-    @Body() dto: UpdateCourtDto,
-  ) {
-    return this.venuesService.updateCourt(courtId, user, dto);
-  }
-
-  @Delete('courts/:courtId')
-  @UseGuards(RolesGuard)
-  @Roles('OWNER', 'ADMIN')
-  deactivateCourt(
-    @Param('courtId') courtId: string,
-    @CurrentUser() user: AuthenticatedUser,
-  ) {
-    return this.venuesService.deactivateCourt(courtId, user);
-  }
-
-  @Post('courts/:courtId/pricing')
-  @UseGuards(RolesGuard)
-  @Roles('OWNER', 'ADMIN')
-  createPriceRule(
-    @Param('courtId') courtId: string,
-    @CurrentUser() user: AuthenticatedUser,
-    @Body() dto: CreatePriceRuleDto,
-  ) {
-    return this.venuesService.createPriceRule(courtId, user, dto);
-  }
-
-  @Patch('pricing/:ruleId')
-  @UseGuards(RolesGuard)
-  @Roles('OWNER', 'ADMIN')
-  updatePriceRule(
-    @Param('ruleId') ruleId: string,
-    @CurrentUser() user: AuthenticatedUser,
-    @Body() dto: UpdatePriceRuleDto,
-  ) {
-    return this.venuesService.updatePriceRule(ruleId, user, dto);
-  }
-
-  @Delete('pricing/:ruleId')
-  @UseGuards(RolesGuard)
-  @Roles('OWNER', 'ADMIN')
-  deletePriceRule(
-    @Param('ruleId') ruleId: string,
-    @CurrentUser() user: AuthenticatedUser,
-  ) {
-    return this.venuesService.deletePriceRule(ruleId, user);
-  }
-
-  @Get('courts/:courtId/maintenance')
-  @UseGuards(RolesGuard)
-  @Roles('OWNER', 'ADMIN')
-  listMaintenance(
-    @Param('courtId') courtId: string,
-    @CurrentUser() user: AuthenticatedUser,
-  ) {
-    return this.venuesService.listMaintenance(courtId, user);
-  }
-
-  @Post('courts/:courtId/maintenance')
-  @UseGuards(RolesGuard)
-  @Roles('OWNER', 'ADMIN')
-  createMaintenance(
-    @Param('courtId') courtId: string,
-    @CurrentUser() user: AuthenticatedUser,
-    @Body() dto: CreateMaintenanceDto,
-  ) {
-    return this.venuesService.createMaintenance(courtId, user, dto);
-  }
-
-  @Delete('maintenance/:maintenanceId')
-  @UseGuards(RolesGuard)
-  @Roles('OWNER', 'ADMIN')
-  deleteMaintenance(
-    @Param('maintenanceId') maintenanceId: string,
-    @CurrentUser() user: AuthenticatedUser,
-  ) {
-    return this.venuesService.deleteMaintenance(maintenanceId, user);
-  }
+interface UserRequest extends Request {
+  user: { id: string; role: AppRole };
 }
 
-@Controller('admin/owners')
-@UseGuards(RolesGuard)
-@Roles('ADMIN')
-export class OwnerApprovalsController {
-  constructor(private readonly venuesService: VenuesService) {}
+interface OptionalUserRequest extends Request {
+  user?: { id: string; role: AppRole };
+}
 
-  @Get('pending')
-  listPending() {
-    return this.venuesService.listPendingOwners();
+@Controller('venues')
+export class VenuesController {
+  constructor(private readonly venues: VenuesService) {}
+
+  @Get()
+  listPublic() {
+    return this.venues.listPublicVenues();
   }
 
-  @Patch(':ownerId/approval')
-  review(
-    @Param('ownerId') ownerId: string,
-    @CurrentUser() reviewer: AuthenticatedUser,
-    @Body() dto: OwnerApprovalDto,
+  @Get('mine')
+  @Roles('CUSTOMER', 'OWNER')
+  @UseGuards(RolesGuard)
+  listMine(@Req() request: UserRequest) {
+    return this.venues.listOwnerVenues(request.user.id);
+  }
+
+  @Get('pending')
+  @Roles('ADMIN')
+  @UseGuards(RolesGuard)
+  listPending() {
+    return this.venues.listPendingVenues();
+  }
+
+  @Post()
+  @Roles('CUSTOMER', 'OWNER')
+  @UseGuards(RolesGuard)
+  create(@Req() request: UserRequest, @Body() dto: CreateVenueDto) {
+    return this.venues.createVenue(request.user.id, dto);
+  }
+
+  @Patch(':venueId/approval')
+  @Roles('ADMIN')
+  @UseGuards(RolesGuard)
+  approve(@Param('venueId') venueId: string, @Body() dto: VenueApprovalDto) {
+    return this.venues.setApproval(venueId, dto);
+  }
+
+  @Patch(':venueId')
+  @Roles('OWNER')
+  @UseGuards(RolesGuard)
+  update(
+    @Req() request: UserRequest,
+    @Param('venueId') venueId: string,
+    @Body() dto: UpdateVenueDto,
   ) {
-    return this.venuesService.reviewOwner(ownerId, reviewer.id, dto);
+    return this.venues.updateVenue(request.user.id, venueId, dto);
+  }
+
+  @Delete(':venueId')
+  @Roles('OWNER')
+  @UseGuards(RolesGuard)
+  deactivate(@Req() request: UserRequest, @Param('venueId') venueId: string) {
+    return this.venues.deactivateVenue(request.user.id, venueId);
+  }
+
+  @Get(':venueId/courts')
+  listCourts(@Param('venueId') venueId: string) {
+    return this.venues.listVenueCourts(venueId);
+  }
+
+  @Post(':venueId/courts')
+  @Roles('OWNER')
+  @UseGuards(RolesGuard)
+  createCourt(
+    @Req() request: UserRequest,
+    @Param('venueId') venueId: string,
+    @Body() dto: CreateCourtDto,
+  ) {
+    return this.venues.createCourt(request.user.id, venueId, dto);
+  }
+
+  @Get(':venueId/opening-hours')
+  getOpeningHours(@Param('venueId') venueId: string, @Req() request: OptionalUserRequest) {
+    const ownerId = request.user?.role === 'OWNER' ? request.user.id : undefined;
+    return this.venues.getOpeningHours(venueId, ownerId);
+  }
+
+  @Put(':venueId/opening-hours')
+  @Roles('OWNER')
+  @UseGuards(RolesGuard)
+  setOpeningHours(
+    @Req() request: UserRequest,
+    @Param('venueId') venueId: string,
+    @Body() dto: SetOpeningHoursDto,
+  ) {
+    return this.venues.replaceOpeningHours(request.user.id, venueId, dto.hours);
   }
 }
