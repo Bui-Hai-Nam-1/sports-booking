@@ -33,6 +33,6 @@ Các route quản lý lấy `user.id` và `user.role` từ `request.user`; khôn
 
 Các model mới được định nghĩa trong `backend/prisma/schema.prisma`. Từ thư mục `backend`, chạy `npm run prisma:generate` và `npx prisma migrate dev` để cập nhật Prisma Client và PostgreSQL. Migration có sẵn tại `backend/prisma/migrations/20261123003400_stadium_management`.
 
-Giao diện chủ sân ở `/owner/venues`. Form duyệt Admin gọi các API `/venues/pending` và `/venues/:venueId/approval`; API vẫn là nơi kiểm tra quyền, không dựa vào việc ẩn/hiện nút trên frontend.
+Giao diện chủ sân ở `/owner/venues`. Nút **Thêm mới sân** mở form đăng ký dạng popup; ảnh JPEG/PNG/WebP/GIF (tối đa 12 ảnh, 10 MB mỗi ảnh) và video MP4/WebM/MOV (tối đa 3 video, 100 MB mỗi video) được upload tới `/api/venues/media`. Tệp lưu tại `backend/uploads` và được phục vụ qua `/api/venues/media/:filename`. Thư mục upload được gitignore; môi trường deploy cần mount persistent volume hoặc thay bằng object storage để giữ tệp qua lần triển khai. Form duyệt Admin gọi các API `/venues/pending` và `/venues/:venueId/approval`; API vẫn là nơi kiểm tra quyền, không dựa vào việc ẩn/hiện nút trên frontend.
 
 Backend bật strict TypeScript, DTO validation qua `ValidationPipe`, response timing qua interceptor và lỗi chuẩn hóa qua exception filter. Frontend bổ sung hai generic hooks (`useAsyncResource<T>`, `useMutation<TInput, TOutput>`) và Compound Component cho tabs. Bộ unit test nghiệp vụ sân chạy bằng `npm run test:cov` trong `backend`; hiện có 22 test case và threshold statement coverage tối thiểu 50% cho service.

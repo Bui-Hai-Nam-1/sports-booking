@@ -1,5 +1,5 @@
-export type VenueStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
-export type PricingType = 'STANDARD' | 'WEEKEND' | 'PEAK';
+export type VenueStatus = "PENDING" | "APPROVED" | "REJECTED";
+export type PricingType = "STANDARD" | "WEEKEND" | "PEAK";
 
 export interface Court {
   id: string;
@@ -14,6 +14,7 @@ export interface Venue {
   address: string;
   description: string | null;
   imageUrls: string[];
+  videoUrls: string[];
   sportTypes: string[];
   status: VenueStatus;
   isActive: boolean;

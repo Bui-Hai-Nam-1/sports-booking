@@ -3,18 +3,18 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
-} from '@nestjs/common';
-import { BookingStatus, Prisma, VenueStatus } from '@prisma/client';
-import { PrismaService } from '../prisma/prisma.service';
-import { CreateCourtDto, UpdateCourtDto } from './dto/court.dto';
-import { CreateMaintenanceBlockDto } from './dto/maintenance.dto';
-import { CreatePricingRuleDto } from './dto/pricing.dto';
-import { VenueApprovalDto } from './dto/venue-approval.dto';
+} from "@nestjs/common";
+import { BookingStatus, Prisma, VenueStatus } from "@prisma/client";
+import { PrismaService } from "../prisma/prisma.service";
+import { CreateCourtDto, UpdateCourtDto } from "./dto/court.dto";
+import { CreateMaintenanceBlockDto } from "./dto/maintenance.dto";
+import { CreatePricingRuleDto } from "./dto/pricing.dto";
+import { VenueApprovalDto } from "./dto/venue-approval.dto";
 import {
   CreateVenueDto,
   OpeningHourDto,
   UpdateVenueDto,
-} from './dto/venue.dto';
+} from "./dto/venue.dto";
 
 const venueSummary = {
   id: true,
@@ -22,6 +22,7 @@ const venueSummary = {
   address: true,
   description: true,
   imageUrls: true,
+  videoUrls: true,
   sportTypes: true,
   status: true,
   isActive: true,
@@ -37,23 +38,29 @@ export class VenuesService {
     return this.prisma.venue.findMany({
       where: { status: VenueStatus.APPROVED, isActive: true },
       select: { ...venueSummary, courts: { where: { isActive: true } } },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
   }
 
   listOwnerVenues(ownerId: string) {
     return this.prisma.venue.findMany({
       where: { ownerId },
-      include: { courts: { orderBy: { createdAt: 'asc' } }, openingHours: true },
-      orderBy: { createdAt: 'desc' },
+      include: {
+        courts: { orderBy: { createdAt: "asc" } },
+        openingHours: true,
+      },
+      orderBy: { createdAt: "desc" },
     });
   }
 
   listPendingVenues() {
     return this.prisma.venue.findMany({
       where: { status: VenueStatus.PENDING },
-      select: { ...venueSummary, owner: { select: { id: true, fullName: true, email: true } } },
-      orderBy: { createdAt: 'asc' },
+      select: {
+        ...venueSummary,
+        owner: { select: { id: true, fullName: true, email: true } },
+      },
+      orderBy: { createdAt: "asc" },
     });
   }
 
@@ -93,7 +100,7 @@ export class VenuesService {
         });
         await transaction.user.update({
           where: { id: venue.ownerId },
-          data: { role: 'OWNER' },
+          data: { role: "OWNER" },
         });
         return approvedVenue;
       });
@@ -109,11 +116,11 @@ export class VenuesService {
     const venue = await this.prisma.venue.findFirst({
       where: { id: venueId, status: VenueStatus.APPROVED, isActive: true },
     });
-    if (!venue) throw new NotFoundException('Venue not found');
+    if (!venue) throw new NotFoundException("Venue not found");
     return this.prisma.court.findMany({
       where: { venueId, isActive: true },
       include: { pricingRules: true },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { createdAt: "asc" },
     });
   }
 
@@ -142,26 +149,39 @@ export class VenuesService {
       const venue = await this.prisma.venue.findFirst({
         where: { id: venueId, status: VenueStatus.APPROVED, isActive: true },
       });
-      if (!venue) throw new NotFoundException('Venue not found');
+      if (!venue) throw new NotFoundException("Venue not found");
     }
     return this.prisma.venueOpeningHour.findMany({
       where: { venueId },
-      orderBy: { weekday: 'asc' },
+      orderBy: { weekday: "asc" },
     });
   }
 
-  async replaceOpeningHours(ownerId: string, venueId: string, hours: OpeningHourDto[]) {
+  async replaceOpeningHours(
+    ownerId: string,
+    venueId: string,
+    hours: OpeningHourDto[],
+  ) {
     await this.getOwnedVenue(ownerId, venueId);
     const weekdays = hours.map(({ weekday }) => weekday);
     if (
       weekdays.some((day) => !Number.isInteger(day) || day < 0 || day > 6) ||
       new Set(weekdays).size !== weekdays.length
     ) {
-      throw new BadRequestException('Opening hours must contain unique weekdays from 0 to 6');
+      throw new BadRequestException(
+        "Opening hours must contain unique weekdays from 0 to 6",
+      );
     }
     for (const hour of hours) {
-      if (!hour.isClosed && (!this.isTime(hour.opensAt) || !this.isTime(hour.closesAt) || hour.opensAt >= hour.closesAt)) {
-        throw new BadRequestException('Opening time must be earlier than closing time');
+      if (
+        !hour.isClosed &&
+        (!this.isTime(hour.opensAt) ||
+          !this.isTime(hour.closesAt) ||
+          hour.opensAt >= hour.closesAt)
+      ) {
+        throw new BadRequestException(
+          "Opening time must be earlier than closing time",
+        );
       }
     }
     return this.prisma.$transaction(async (transaction) => {
@@ -173,7 +193,7 @@ export class VenuesService {
       }
       return transaction.venueOpeningHour.findMany({
         where: { venueId },
-        orderBy: { weekday: 'asc' },
+        orderBy: { weekday: "asc" },
       });
     });
   }
@@ -182,24 +202,36 @@ export class VenuesService {
     await this.getCourtForRead(courtId, ownerId);
     return this.prisma.pricingRule.findMany({
       where: { courtId },
-      orderBy: [{ type: 'asc' }, { weekday: 'asc' }, { startsAt: 'asc' }],
+      orderBy: [{ type: "asc" }, { weekday: "asc" }, { startsAt: "asc" }],
     });
   }
 
-  async createPricingRule(ownerId: string, courtId: string, dto: CreatePricingRuleDto) {
+  async createPricingRule(
+    ownerId: string,
+    courtId: string,
+    dto: CreatePricingRuleDto,
+  ) {
     await this.getOwnedCourt(ownerId, courtId);
     if (dto.startsAt >= dto.endsAt) {
-      throw new BadRequestException('Pricing rule start time must be earlier than end time');
+      throw new BadRequestException(
+        "Pricing rule start time must be earlier than end time",
+      );
     }
     return this.prisma.pricingRule.create({
-      data: { ...dto, pricePerHour: new Prisma.Decimal(dto.pricePerHour), courtId },
+      data: {
+        ...dto,
+        pricePerHour: new Prisma.Decimal(dto.pricePerHour),
+        courtId,
+      },
     });
   }
 
   async deletePricingRule(ownerId: string, courtId: string, ruleId: string) {
     await this.getOwnedCourt(ownerId, courtId);
-    const rule = await this.prisma.pricingRule.findFirst({ where: { id: ruleId, courtId } });
-    if (!rule) throw new NotFoundException('Pricing rule not found');
+    const rule = await this.prisma.pricingRule.findFirst({
+      where: { id: ruleId, courtId },
+    });
+    if (!rule) throw new NotFoundException("Pricing rule not found");
     await this.prisma.pricingRule.delete({ where: { id: ruleId } });
     return { id: ruleId, deleted: true };
   }
@@ -208,16 +240,22 @@ export class VenuesService {
     await this.getCourtForRead(courtId, ownerId);
     return this.prisma.maintenanceBlock.findMany({
       where: { courtId },
-      orderBy: { startAt: 'asc' },
+      orderBy: { startAt: "asc" },
     });
   }
 
-  async createMaintenanceBlock(ownerId: string, courtId: string, dto: CreateMaintenanceBlockDto) {
+  async createMaintenanceBlock(
+    ownerId: string,
+    courtId: string,
+    dto: CreateMaintenanceBlockDto,
+  ) {
     await this.getOwnedCourt(ownerId, courtId);
     const startAt = new Date(dto.startAt);
     const endAt = new Date(dto.endAt);
     if (startAt >= endAt) {
-      throw new BadRequestException('Maintenance end time must be after start time');
+      throw new BadRequestException(
+        "Maintenance end time must be after start time",
+      );
     }
     const [existingBlock, existingBooking] = await Promise.all([
       this.prisma.maintenanceBlock.findFirst({
@@ -233,26 +271,34 @@ export class VenuesService {
       }),
     ]);
     if (existingBlock || existingBooking) {
-      throw new ConflictException('Maintenance time conflicts with an existing block or booking');
+      throw new ConflictException(
+        "Maintenance time conflicts with an existing block or booking",
+      );
     }
     return this.prisma.maintenanceBlock.create({
       data: { courtId, startAt, endAt, reason: dto.reason },
     });
   }
 
-  async deleteMaintenanceBlock(ownerId: string, courtId: string, blockId: string) {
+  async deleteMaintenanceBlock(
+    ownerId: string,
+    courtId: string,
+    blockId: string,
+  ) {
     await this.getOwnedCourt(ownerId, courtId);
     const block = await this.prisma.maintenanceBlock.findFirst({
       where: { id: blockId, courtId },
     });
-    if (!block) throw new NotFoundException('Maintenance block not found');
+    if (!block) throw new NotFoundException("Maintenance block not found");
     await this.prisma.maintenanceBlock.delete({ where: { id: blockId } });
     return { id: blockId, deleted: true };
   }
 
   async getOwnedVenue(ownerId: string, venueId: string) {
-    const venue = await this.prisma.venue.findFirst({ where: { id: venueId, ownerId } });
-    if (!venue) throw new NotFoundException('Venue not found');
+    const venue = await this.prisma.venue.findFirst({
+      where: { id: venueId, ownerId },
+    });
+    if (!venue) throw new NotFoundException("Venue not found");
     return venue;
   }
 
@@ -260,7 +306,7 @@ export class VenuesService {
     const court = await this.prisma.court.findFirst({
       where: { id: courtId, venue: { ownerId } },
     });
-    if (!court) throw new NotFoundException('Court not found');
+    if (!court) throw new NotFoundException("Court not found");
     return court;
   }
 
@@ -272,7 +318,7 @@ export class VenuesService {
         venue: { status: VenueStatus.APPROVED, isActive: true },
       },
     });
-    if (!court) throw new NotFoundException('Court not found');
+    if (!court) throw new NotFoundException("Court not found");
     return court;
   }
 
@@ -283,8 +329,10 @@ export class VenuesService {
   }
 
   private async getVenue(venueId: string) {
-    const venue = await this.prisma.venue.findUnique({ where: { id: venueId } });
-    if (!venue) throw new NotFoundException('Venue not found');
+    const venue = await this.prisma.venue.findUnique({
+      where: { id: venueId },
+    });
+    if (!venue) throw new NotFoundException("Venue not found");
     return venue;
   }
 

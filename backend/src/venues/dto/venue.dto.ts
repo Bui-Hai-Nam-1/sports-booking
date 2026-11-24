@@ -1,4 +1,4 @@
-import { Type } from 'class-transformer';
+import { Type } from "class-transformer";
 import {
   ArrayMaxSize,
   ArrayUnique,
@@ -13,7 +13,7 @@ import {
   MinLength,
   Min,
   ValidateNested,
-} from 'class-validator';
+} from "class-validator";
 
 export class CreateVenueDto {
   @IsString()
@@ -36,6 +36,13 @@ export class CreateVenueDto {
   @ArrayMaxSize(12)
   @IsString({ each: true })
   imageUrls!: string[];
+
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @ArrayMaxSize(3)
+  @IsString({ each: true })
+  videoUrls?: string[];
 
   @IsArray()
   @ArrayUnique()
@@ -68,6 +75,13 @@ export class UpdateVenueDto {
   @ArrayMaxSize(12)
   @IsString({ each: true })
   imageUrls?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @ArrayMaxSize(3)
+  @IsString({ each: true })
+  videoUrls?: string[];
 
   @IsOptional()
   @IsArray()

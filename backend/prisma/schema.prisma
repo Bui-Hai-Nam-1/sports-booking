@@ -53,6 +53,7 @@ model Venue {
   address     String
   description String?
   imageUrls   String[]    @default([])
+  videoUrls   String[]    @default([])
   sportTypes  String[]    @default([])
   status      VenueStatus @default(PENDING)
   isActive    Boolean     @default(true)

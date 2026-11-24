@@ -10,4 +10,5 @@ coverage/
 .idea/
 *.log
 backend/prisma/dev.db
+backend/uploads/
 *.tsbuildinfo
