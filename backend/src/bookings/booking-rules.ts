@@ -1,11 +1,13 @@
 import { BadRequestException } from '@nestjs/common';
-import { PricingType } from '@prisma/client';
+import { BookingStatus, PricingType } from '@prisma/client';
+import type { AppRole } from '../common/auth/auth.types';
 import type { TimeInterval } from '../common/types/api.types';
 import {
   ACTIVE_BLOCKING_BOOKING_STATUSES,
   isValidDateString,
   isValidTimeString,
   type AvailabilitySlot,
+  type BookingTransitionMap,
   type BookingWindow,
   type DayAvailabilityRow,
   type MaintenanceWindow,
@@ -18,9 +20,25 @@ import {
 export const VN_TIMEZONE_OFFSET_MINUTES = 7 * 60;
 export const SLOT_DURATION_MINUTES = 60;
 export const MAX_CONSECUTIVE_SLOTS = 12;
+export const CANCELLATION_DEADLINE_HOURS = 2;
 export const DEFAULT_FALLBACK_PRICE_PER_HOUR = 100000;
 export const DEFAULT_OPENS_AT = '06:00';
 export const DEFAULT_CLOSES_AT = '22:00';
+
+export const BOOKING_STATUS_TRANSITIONS: BookingTransitionMap = {
+  [BookingStatus.PENDING]: [
+    BookingStatus.CONFIRMED,
+    BookingStatus.REJECTED,
+    BookingStatus.CANCELLED,
+  ],
+  [BookingStatus.CONFIRMED]: [
+    BookingStatus.COMPLETED,
+    BookingStatus.CANCELLED,
+  ],
+  [BookingStatus.COMPLETED]: [],
+  [BookingStatus.CANCELLED]: [],
+  [BookingStatus.REJECTED]: [],
+};
 
 /**
  * Converts HH:mm (or 24:00 when allowed) into minutes from midnight.
@@ -486,4 +504,115 @@ export function calculateBookingTotalPrice(params: {
     totalPrice: Math.round(totalPrice * 100) / 100,
     breakdown,
   };
+}
+
+/**
+ * Resolves either discrete slots[] or a continuous [startAt, endAt) input into validated hourly segments.
+ */
+export function resolveBookingSegmentsFromInput(input: {
+  startAt?: string;
+  endAt?: string;
+  slots?: ReadonlyArray<{ startAt: string; endAt: string }>;
+}): { startAt: Date; endAt: Date; segments: ReadonlyArray<TimeInterval> } {
+  if (input.slots && input.slots.length > 0) {
+    const intervals: TimeInterval[] = input.slots.map((slot) => {
+      const startAt = new Date(slot.startAt);
+      const endAt = new Date(slot.endAt);
+      if (
+        Number.isNaN(startAt.getTime()) ||
+        Number.isNaN(endAt.getTime()) ||
+        startAt.getTime() >= endAt.getTime()
+      ) {
+        throw new BadRequestException('Each slot must have valid startAt < endAt');
+      }
+      return { startAt, endAt };
+    });
+    const merged = mergeContiguousSlots(intervals);
+    return {
+      startAt: merged.startAt,
+      endAt: merged.endAt,
+      segments: merged.hourlySegments,
+    };
+  }
+
+  if (input.startAt && input.endAt) {
+    const startAt = new Date(input.startAt);
+    const endAt = new Date(input.endAt);
+    const segments = splitIntervalIntoHourlySlots(startAt, endAt);
+    return { startAt, endAt, segments };
+  }
+
+  throw new BadRequestException(
+    'Provide either slots[] or both startAt and endAt',
+  );
+}
+
+/**
+ * Enforces cancellation policy based on booking status, actor role, and lead time.
+ */
+export function assertCancellationAllowed(params: {
+  status: BookingStatus;
+  startAt: Date;
+  actorRole: AppRole;
+  now?: Date;
+}): void {
+  const { status, startAt, actorRole, now = new Date() } = params;
+
+  if (!ACTIVE_BLOCKING_BOOKING_STATUSES.includes(status)) {
+    throw new BadRequestException(
+      `Booking with status ${status} cannot be cancelled`,
+    );
+  }
+
+  if (now.getTime() >= startAt.getTime()) {
+    throw new BadRequestException(
+      'Cannot cancel a booking that has already started or passed',
+    );
+  }
+
+  if (actorRole === 'CUSTOMER') {
+    const minLeadMs = CANCELLATION_DEADLINE_HOURS * 60 * 60 * 1000;
+    if (startAt.getTime() - now.getTime() < minLeadMs) {
+      throw new BadRequestException(
+        `Customers must cancel at least ${CANCELLATION_DEADLINE_HOURS} hours before start time`,
+      );
+    }
+  }
+}
+
+/**
+ * Enforces booking status state-machine transitions and completion timing.
+ */
+export function assertValidStatusTransition(params: {
+  currentStatus: BookingStatus;
+  nextStatus: BookingStatus;
+  startAt: Date;
+  now?: Date;
+}): void {
+  const { currentStatus, nextStatus, startAt, now = new Date() } = params;
+  const allowed = BOOKING_STATUS_TRANSITIONS[currentStatus];
+
+  if (!allowed.includes(nextStatus)) {
+    throw new BadRequestException(
+      `Cannot transition booking from ${currentStatus} to ${nextStatus}`,
+    );
+  }
+
+  if (
+    nextStatus === BookingStatus.COMPLETED &&
+    now.getTime() < startAt.getTime()
+  ) {
+    throw new BadRequestException(
+      'Cannot mark booking as COMPLETED before start time',
+    );
+  }
+
+  if (
+    nextStatus === BookingStatus.CANCELLED &&
+    now.getTime() >= startAt.getTime()
+  ) {
+    throw new BadRequestException(
+      'Cannot cancel a booking that has already started',
+    );
+  }
 }
