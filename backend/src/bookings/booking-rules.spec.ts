@@ -254,6 +254,7 @@ describe('booking-rules cancellation and status transitions', () => {
       assertCancellationAllowed({
         status: BookingStatus.PENDING,
         startAt: matchStart,
+        endAt: new Date(matchStart.getTime() + 3600_000),
         actorRole: 'CUSTOMER',
         now: threeHoursBefore,
       }),
@@ -263,6 +264,7 @@ describe('booking-rules cancellation and status transitions', () => {
       assertCancellationAllowed({
         status: BookingStatus.CONFIRMED,
         startAt: matchStart,
+        endAt: new Date(matchStart.getTime() + 3600_000),
         actorRole: 'CUSTOMER',
         now: oneHourBefore,
       }),
@@ -272,6 +274,7 @@ describe('booking-rules cancellation and status transitions', () => {
       assertCancellationAllowed({
         status: BookingStatus.CONFIRMED,
         startAt: matchStart,
+        endAt: new Date(matchStart.getTime() + 3600_000),
         actorRole: 'OWNER',
         now: oneHourBefore,
       }),
@@ -283,6 +286,7 @@ describe('booking-rules cancellation and status transitions', () => {
       assertCancellationAllowed({
         status: BookingStatus.COMPLETED,
         startAt: matchStart,
+        endAt: new Date(matchStart.getTime() + 3600_000),
         actorRole: 'ADMIN',
         now: new Date(matchStart.getTime() - 5 * 3600_000),
       }),
@@ -292,6 +296,7 @@ describe('booking-rules cancellation and status transitions', () => {
       assertCancellationAllowed({
         status: BookingStatus.CONFIRMED,
         startAt: matchStart,
+        endAt: new Date(matchStart.getTime() + 3600_000),
         actorRole: 'OWNER',
         now: new Date(matchStart.getTime() + 1000),
       }),
@@ -301,12 +306,15 @@ describe('booking-rules cancellation and status transitions', () => {
   it('enforces valid booking status state-machine transitions', () => {
     const beforeStart = new Date(matchStart.getTime() - 3600_000);
     const afterStart = new Date(matchStart.getTime() + 3600_000);
+    const beforeEnd = new Date(matchStart.getTime() + 30 * 60_000);
+    const afterEnd = new Date(matchStart.getTime() + 90 * 60_000);
 
     expect(() =>
       assertValidStatusTransition({
         currentStatus: BookingStatus.PENDING,
         nextStatus: BookingStatus.CONFIRMED,
         startAt: matchStart,
+        endAt: new Date(matchStart.getTime() + 3600_000),
         now: beforeStart,
       }),
     ).not.toThrow();
@@ -316,6 +324,7 @@ describe('booking-rules cancellation and status transitions', () => {
         currentStatus: BookingStatus.CONFIRMED,
         nextStatus: BookingStatus.COMPLETED,
         startAt: matchStart,
+        endAt: new Date(matchStart.getTime() + 3600_000),
         now: beforeStart,
       }),
     ).toThrow(BadRequestException);
@@ -325,7 +334,18 @@ describe('booking-rules cancellation and status transitions', () => {
         currentStatus: BookingStatus.CONFIRMED,
         nextStatus: BookingStatus.COMPLETED,
         startAt: matchStart,
-        now: afterStart,
+        endAt: new Date(matchStart.getTime() + 3600_000),
+        now: beforeEnd,
+      }),
+    ).toThrow(BadRequestException);
+
+    expect(() =>
+      assertValidStatusTransition({
+        currentStatus: BookingStatus.CONFIRMED,
+        nextStatus: BookingStatus.COMPLETED,
+        startAt: matchStart,
+        endAt: new Date(matchStart.getTime() + 3600_000),
+        now: afterEnd,
       }),
     ).not.toThrow();
 
@@ -334,6 +354,7 @@ describe('booking-rules cancellation and status transitions', () => {
         currentStatus: BookingStatus.CANCELLED,
         nextStatus: BookingStatus.CONFIRMED,
         startAt: matchStart,
+        endAt: new Date(matchStart.getTime() + 3600_000),
         now: beforeStart,
       }),
     ).toThrow(BadRequestException);
