@@ -318,6 +318,7 @@ describe('BookingsService', () => {
       id: 'bk-1',
       userId: customer.id,
       startAt: buildDateTimeFromLocal(futureDate, '18:00'),
+      endAt: buildDateTimeFromLocal(futureDate, '19:00'),
       status: BookingStatus.PENDING,
       court: { venue: { ownerId: owner.id } },
     });
