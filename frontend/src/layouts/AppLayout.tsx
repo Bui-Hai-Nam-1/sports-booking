@@ -36,6 +36,14 @@ export function AppLayout() {
             {user ? (
               <>
                 <Link to="/profile">Hồ sơ</Link>
+                {(user.role === 'CUSTOMER' || user.role === 'OWNER') && (
+                  <Link to="/owner/venues">
+                    {user.role === 'OWNER' ? 'Quản lý sân' : 'Đăng ký sân'}
+                  </Link>
+                )}
+                {user.role === 'ADMIN' && (
+                  <Link to="/admin/dashboard">Quản trị</Link>
+                )}
                 <span>{user.fullName} ({user.role})</span>
                 <button type="button" onClick={handleLogout}>
                   Đăng xuất
