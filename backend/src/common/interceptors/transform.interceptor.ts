@@ -21,26 +21,18 @@ export class TransformInterceptor<T> implements NestInterceptor<T, StandardRespo
 
     return next.handle().pipe(
       map((result) => {
-        // If result is already structured with success flag or null/undefined, handle appropriately
+        // Preserve responses that are already wrapped by a controller.
         if (result && typeof result === 'object' && 'success' in result) {
           return result;
         }
 
-        // Avoid transforming streams or direct file responses
+        // Do not wrap file downloads.
         if (response.getHeader && response.getHeader('Content-Disposition')) {
           return result;
         }
 
-        // If result has items and total, lift pagination to meta
-        if (result && typeof result === 'object' && 'items' in result && 'total' in result) {
-          const { items, ...meta } = result;
-          return {
-            success: true,
-            data: items,
-            meta,
-          };
-        }
-
+        // Keep the complete service payload (including items, total, page, and
+        // totalPages) under data so API clients do not lose pagination fields.
         return {
           success: true,
           data: result,
