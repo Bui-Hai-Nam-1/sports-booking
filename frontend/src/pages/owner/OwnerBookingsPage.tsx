@@ -152,16 +152,19 @@ export function OwnerBookingsPage() {
             </>
           )}
 
-          {row.status === 'CONFIRMED' && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => completeMutation.mutate(row.id)}
-              loading={completeMutation.isPending}
-            >
-              Hoàn thành
-            </Button>
-          )}
+          {row.status === 'CONFIRMED' &&
+            (new Date(row.endAt).getTime() <= Date.now() ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => completeMutation.mutate(row.id)}
+                loading={completeMutation.isPending}
+              >
+                Hoàn thành
+              </Button>
+            ) : (
+              <span className="text-muted text-sm">Chưa kết thúc</span>
+            ))}
         </div>
       ),
     },
