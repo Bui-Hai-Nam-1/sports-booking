@@ -1,11 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '../lib/api';
 
-type PendingOwner = {
+type PendingVenue = {
   id: string;
-  fullName: string;
-  email: string;
+  name: string;
+  address: string;
   createdAt: string;
+  owner: {
+    id: string;
+    fullName: string;
+    email: string;
+  };
 };
 
 function getErrorMessage(error: unknown): string {
@@ -20,18 +25,19 @@ function getErrorMessage(error: unknown): string {
       if (
         typeof data === 'object' &&
         data !== null &&
-        'message' in data &&
-        typeof data.message === 'string'
+        'message' in data
       ) {
-        return data.message;
+        const message = data.message;
+        if (typeof message === 'string') return message;
+        if (Array.isArray(message)) return message.join(', ');
       }
     }
   }
-  return 'Không thể tải hoặc cập nhật danh sách chủ sân.';
+  return 'Không thể tải hoặc cập nhật danh sách sân chờ duyệt.';
 }
 
 export function OwnerApprovalPage() {
-  const [owners, setOwners] = useState<PendingOwner[]>([]);
+  const [venues, setVenues] = useState<PendingVenue[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -39,8 +45,8 @@ export function OwnerApprovalPage() {
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await api.get<PendingOwner[]>('/admin/owners/pending');
-      setOwners(response.data);
+      const response = await api.get<PendingVenue[]>('/venues/pending');
+      setVenues(response.data);
       setError('');
     } catch (requestError) {
       setError(getErrorMessage(requestError));
@@ -53,13 +59,15 @@ export function OwnerApprovalPage() {
     void refresh();
   }, [refresh]);
 
-  async function review(ownerId: string, status: 'APPROVED' | 'REJECTED') {
+  async function review(venueId: string, status: 'APPROVED' | 'REJECTED') {
+    setError('');
+    setNotice('');
     try {
-      await api.patch(`/admin/owners/${ownerId}/approval`, { status });
+      await api.patch(`/venues/${venueId}/approval`, { status });
       setNotice(
         status === 'APPROVED'
-          ? 'Đã duyệt chủ sân.'
-          : 'Đã từ chối yêu cầu chủ sân.',
+          ? 'Đã duyệt địa điểm. Tài khoản chủ sân được cấp quyền OWNER.'
+          : 'Đã từ chối địa điểm.',
       );
       await refresh();
     } catch (requestError) {
@@ -72,8 +80,8 @@ export function OwnerApprovalPage() {
       <div className="management-heading">
         <div>
           <p className="eyebrow">QUẢN TRỊ</p>
-          <h1>Duyệt chủ sân</h1>
-          <p>Chủ sân cần được duyệt trước khi tạo và quản lý địa điểm.</p>
+          <h1>Duyệt đăng ký sân</h1>
+          <p>Kiểm tra thông tin địa điểm trước khi công khai và cấp quyền chủ sân.</p>
         </div>
         <button
           className="button button-secondary"
@@ -94,32 +102,35 @@ export function OwnerApprovalPage() {
         </div>
       )}
       {loading && <p>Đang tải yêu cầu…</p>}
-      {!loading && owners.length === 0 && !error && (
-        <p className="empty-state">Hiện không có yêu cầu nào cần duyệt.</p>
+      {!loading && venues.length === 0 && !error && (
+        <p className="empty-state">Hiện không có địa điểm nào cần duyệt.</p>
       )}
       <div className="managed-venues">
-        {owners.map((owner) => (
-          <article className="management-card approval-card" key={owner.id}>
+        {venues.map((venue) => (
+          <article className="management-card approval-card" key={venue.id}>
             <div>
-              <h2>{owner.fullName}</h2>
-              <p>{owner.email}</p>
+              <h2>{venue.name}</h2>
+              <p>{venue.address}</p>
+              <p>
+                Chủ sân: {venue.owner.fullName} · {venue.owner.email}
+              </p>
               <span className="field-hint">
-                Đăng ký ngày{' '}
-                {new Date(owner.createdAt).toLocaleDateString('vi-VN')}
+                Gửi ngày{' '}
+                {new Date(venue.createdAt).toLocaleDateString('vi-VN')}
               </span>
             </div>
             <div className="form-actions">
               <button
                 className="button"
                 type="button"
-                onClick={() => void review(owner.id, 'APPROVED')}
+                onClick={() => void review(venue.id, 'APPROVED')}
               >
                 Duyệt
               </button>
               <button
                 className="button button-danger"
                 type="button"
-                onClick={() => void review(owner.id, 'REJECTED')}
+                onClick={() => void review(venue.id, 'REJECTED')}
               >
                 Từ chối
               </button>
