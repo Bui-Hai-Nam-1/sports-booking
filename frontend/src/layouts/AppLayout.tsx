@@ -7,7 +7,8 @@ export function AppLayout() {
         <Link className="brand" to="/">Sports Booking</Link>
         <nav aria-label="Điều hướng chính">
           <Link to="/">Trang chủ</Link>
-          <a href="#courts">Tìm sân</a>
+          <Link to="/bookings">Tìm sân</Link>
+          <Link to="/bookings/my">Đơn đặt</Link>
           <a href="#login">Đăng nhập</a>
         </nav>
       </header>
