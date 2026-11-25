@@ -3,6 +3,7 @@ import {
   ExecutionContext,
   Injectable,
   NestInterceptor,
+  StreamableFile,
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
@@ -26,7 +27,13 @@ export class TransformInterceptor<T> implements NestInterceptor<T, StandardRespo
           return result;
         }
 
-        // Do not wrap file downloads.
+        // StreamableFile applies its headers when Nest sends the response, so
+        // checking response headers here is not sufficient on its own.
+        if (result instanceof StreamableFile) {
+          return result;
+        }
+
+        // Do not wrap other file downloads with an explicit disposition.
         if (response.getHeader && response.getHeader('Content-Disposition')) {
           return result;
         }
