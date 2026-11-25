@@ -316,7 +316,7 @@ export class BookingsService {
     const where: Prisma.BookingWhereInput = {
       ...(query.status ? { status: query.status } : {}),
       ...(query.courtId ? { courtId: query.courtId } : {}),
-      ...(this.buildDateFilter(query.date)),
+      ...(this.buildDateRangeFilter(query.dateFrom, query.dateTo, query.date)),
       court: {
         ...(query.venueId ? { venueId: query.venueId } : {}),
         ...(user.role === 'OWNER' ? { venue: { ownerId: user.id } } : {}),
