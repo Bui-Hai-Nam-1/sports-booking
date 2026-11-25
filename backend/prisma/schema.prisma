@@ -21,66 +21,141 @@ enum BookingStatus {
   REJECTED
 }
 
-model User {
-  id        String   @id @default(cuid())
-  fullName  String
-  email     String   @unique
-  password  String
-  role      UserRole @default(CUSTOMER)
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+enum VenueStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
 
+enum PricingType {
+  STANDARD
+  WEEKEND
+  PEAK
+}
+
+enum ComplaintStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  REJECTED
+}
+
+model User {
+  id                     String      @id @default(cuid())
+  fullName               String
+  email                  String      @unique
+  password               String
+  role                   UserRole    @default(CUSTOMER)
+  isActive               Boolean     @default(true)
+  createdAt              DateTime    @default(now())
+  updatedAt              DateTime    @updatedAt
   passwordResetTokenHash String?
   passwordResetExpiresAt DateTime?
-
-  venues    Venue[]
-  bookings  Booking[]
-  reviews   Review[]
+  venues                 Venue[]
+  bookings               Booking[]
+  reviews                Review[]
+  complaintsMade         Complaint[] @relation("ComplainantUser")
+  complaintsAssigned     Complaint[] @relation("AssignedAdminUser")
 }
 
 model Venue {
-  id          String   @id @default(cuid())
-  name        String
-  address     String
-  description String?
-  ownerId     String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String      @id @default(cuid())
+  name         String
+  address      String
+  description  String?
+  imageUrls    String[]    @default([])
+  videoUrls    String[]    @default([])
+  sportTypes   String[]    @default([])
+  status       VenueStatus @default(PENDING)
+  isActive     Boolean     @default(true)
+  ownerId      String
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  owner        User               @relation(fields: [ownerId], references: [id])
+  courts       Court[]
+  openingHours VenueOpeningHour[]
 
-  owner       User     @relation(fields: [ownerId], references: [id])
-  courts      Court[]
+  @@index([status, isActive])
 }
 
 model Court {
-  id          String   @id @default(cuid())
-  name        String
-  sportType   String
-  isActive    Boolean  @default(true)
-  venueId     String
-  createdAt   DateTime @default(now())
+  id                String   @id @default(cuid())
+  name              String
+  sportType         String
+  imageUrls         String[] @default([])
+  isActive          Boolean  @default(true)
+  venueId           String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  venue             Venue              @relation(fields: [venueId], references: [id])
+  bookings          Booking[]
+  reviews           Review[]
+  pricingRules      PricingRule[]
+  maintenanceBlocks MaintenanceBlock[]
 
-  venue       Venue    @relation(fields: [venueId], references: [id])
-  bookings    Booking[]
-  reviews     Review[]
+  @@index([venueId, isActive, sportType])
+}
+
+model VenueOpeningHour {
+  id       String  @id @default(cuid())
+  weekday  Int
+  opensAt  String
+  closesAt String
+  isClosed Boolean @default(false)
+  venueId  String
+  venue    Venue   @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  @@unique([venueId, weekday])
+}
+
+model PricingRule {
+  id           String      @id @default(cuid())
+  type         PricingType
+  pricePerHour Decimal     @db.Decimal(12, 2)
+  weekday      Int?
+  startsAt     String
+  endsAt       String
+  courtId      String
+  court        Court       @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  createdAt    DateTime    @default(now())
+
+  @@index([courtId, type, weekday])
+}
+
+model MaintenanceBlock {
+  id        String   @id @default(cuid())
+  startAt   DateTime
+  endAt     DateTime
+  reason    String
+  courtId   String
+  court     Court    @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([courtId, startAt, endAt])
 }
 
 model Booking {
-  id        String        @id @default(cuid())
-  startAt   DateTime
-  endAt     DateTime
-  totalPrice Decimal      @db.Decimal(12, 2)
-  status    BookingStatus @default(PENDING)
-  userId    String
-  courtId   String
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
-
-  user      User          @relation(fields: [userId], references: [id])
-  court     Court          @relation(fields: [courtId], references: [id])
+  id            String        @id @default(cuid())
+  startAt       DateTime
+  endAt         DateTime
+  totalPrice    Decimal       @db.Decimal(12, 2)
+  status        BookingStatus @default(PENDING)
+  notes         String?
+  cancelReason  String?
+  cancelledAt   DateTime?
+  cancelledById String?
+  userId        String
+  courtId       String
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  user          User          @relation(fields: [userId], references: [id])
+  court         Court         @relation(fields: [courtId], references: [id])
+  review        Review?
+  complaints    Complaint[]
 
   @@index([courtId, startAt, endAt])
   @@index([userId, createdAt])
+  @@index([status, startAt])
 }
 
 model Review {
@@ -89,10 +164,34 @@ model Review {
   comment   String?
   userId    String
   courtId   String
+  bookingId String?  @unique
   createdAt DateTime @default(now())
-
+  updatedAt DateTime @updatedAt
   user      User     @relation(fields: [userId], references: [id])
   court     Court    @relation(fields: [courtId], references: [id])
+  booking   Booking? @relation(fields: [bookingId], references: [id])
 
-  @@unique([userId, courtId])
+  @@index([courtId])
+  @@index([userId])
+}
+
+model Complaint {
+  id              String          @id @default(cuid())
+  bookingId       String
+  complainantId   String
+  subject         String
+  description     String
+  status          ComplaintStatus @default(OPEN)
+  resolution      String?
+  assignedAdminId String?
+  resolvedAt      DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @default(now())
+  booking         Booking         @relation(fields: [bookingId], references: [id])
+  complainant     User            @relation("ComplainantUser", fields: [complainantId], references: [id])
+  assignedAdmin   User?           @relation("AssignedAdminUser", fields: [assignedAdminId], references: [id])
+
+  @@index([bookingId])
+  @@index([complainantId])
+  @@index([status])
 }
