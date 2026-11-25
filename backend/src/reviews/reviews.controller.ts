@@ -48,7 +48,10 @@ export class ReviewsController {
 
   @Get('bookings/:bookingId/review')
   @UseGuards(JwtAuthGuard)
-  async getBookingReview(@Param('bookingId') bookingId: string) {
-    return this.reviewsService.getReviewByBooking(bookingId);
+  async getBookingReview(
+    @Param('bookingId') bookingId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.reviewsService.getReviewByBooking(bookingId, user.id);
   }
 }
