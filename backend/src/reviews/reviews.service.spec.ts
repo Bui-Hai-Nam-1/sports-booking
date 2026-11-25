@@ -191,4 +191,25 @@ describe('ReviewsService', () => {
     expect(result.averageRating).toBe(4.5);
     expect(result.items.length).toBe(2);
   });
+
+  it('only returns a booking review to the booking owner', async () => {
+    prisma.booking.findUnique.mockResolvedValue({ id: 'b-owner', userId: 'user-1' });
+    prisma.review.findUnique.mockResolvedValue({ id: 'review-1', bookingId: 'b-owner' });
+
+    const result = await service.getReviewByBooking('b-owner', 'user-1');
+
+    expect(result.id).toBe('review-1');
+    expect(prisma.review.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { bookingId: 'b-owner' } }),
+    );
+  });
+
+  it('denies booking review lookup to another authenticated user', async () => {
+    prisma.booking.findUnique.mockResolvedValue({ id: 'b-owner', userId: 'owner-1' });
+
+    await expect(
+      service.getReviewByBooking('b-owner', 'other-user'),
+    ).rejects.toThrow(ForbiddenException);
+    expect(prisma.review.findUnique).not.toHaveBeenCalled();
+  });
 });
