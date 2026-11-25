@@ -59,7 +59,8 @@ export function BookingDetailPage() {
   const endAt = new Date(booking.endAt);
   const isPast = endAt <= new Date();
   const canCancel =
-    (booking.status === 'PENDING' || booking.status === 'CONFIRMED') && !isPast;
+    (booking.status === 'PENDING' || booking.status === 'CONFIRMED') &&
+    startAt.getTime() - Date.now() >= 2 * 60 * 60 * 1000;
   const canReview = booking.status === 'COMPLETED' && isPast && !booking.review;
 
   return (
