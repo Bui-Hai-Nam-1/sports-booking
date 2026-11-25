@@ -371,6 +371,27 @@ describe('BookingsService', () => {
     expect(mine.items).toHaveLength(1);
     expect(mine.meta.totalPages).toBe(1);
 
+    await service.listMyBookings(customer, {
+      dateFrom: futureDate,
+      dateTo: '2099-06-16',
+    });
+    expect(prismaMock.booking.findMany).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          userId: customer.id,
+          startAt: { lt: buildDateTimeFromLocal('2099-06-17', '00:00') },
+          endAt: { gt: buildDateTimeFromLocal(futureDate, '00:00') },
+        }),
+      }),
+    );
+
+    await expect(
+      service.listMyBookings(customer, {
+        dateFrom: '2099-06-16',
+        dateTo: futureDate,
+      }),
+    ).rejects.toThrow(BadRequestException);
+
     const managed = await service.listManagedBookings(admin, {
       date: futureDate,
     });
