@@ -19,7 +19,7 @@ function normalizePage(data: any, params: BookingQueryParams): PaginatedResponse
 }
 
 export async function fetchMyBookings(params: BookingQueryParams): Promise<PaginatedResponse<Booking>> {
-  const query = { page: params.page, limit: params.pageSize, status: params.status, courtId: params.courtId, date: params.dateFrom };
+  const query = { page: params.page, limit: params.pageSize, status: params.status, courtId: params.courtId, dateFrom: params.dateFrom, dateTo: params.dateTo };
   const res = await api.get('/bookings/me', { params: query });
   return normalizePage(res.data, params);
 }
@@ -30,7 +30,7 @@ export async function cancelCustomerBooking(id: string): Promise<Booking> {
   const res = await api.patch(`/bookings/${id}/cancel`, { reason: 'Yêu cầu hủy từ khách hàng' }); return res.data;
 }
 export async function fetchOwnerBookings(params: BookingQueryParams): Promise<PaginatedResponse<Booking>> {
-  const query = { page: params.page, limit: params.pageSize, status: params.status, courtId: params.courtId, date: params.dateFrom };
+  const query = { page: params.page, limit: params.pageSize, status: params.status, courtId: params.courtId, dateFrom: params.dateFrom, dateTo: params.dateTo };
   const res = await api.get('/bookings/owner', { params: query }); return normalizePage(res.data, params);
 }
 export async function confirmOwnerBooking(id: string): Promise<Booking> {
