@@ -448,6 +448,7 @@ export class BookingsService {
         currentStatus: booking.status,
         nextStatus: dto.status,
         startAt: booking.startAt,
+        endAt: booking.endAt,
         now,
       });
 
