@@ -254,7 +254,6 @@ describe('booking-rules cancellation and status transitions', () => {
       assertCancellationAllowed({
         status: BookingStatus.PENDING,
         startAt: matchStart,
-        endAt: new Date(matchStart.getTime() + 3600_000),
         actorRole: 'CUSTOMER',
         now: threeHoursBefore,
       }),
@@ -264,7 +263,6 @@ describe('booking-rules cancellation and status transitions', () => {
       assertCancellationAllowed({
         status: BookingStatus.CONFIRMED,
         startAt: matchStart,
-        endAt: new Date(matchStart.getTime() + 3600_000),
         actorRole: 'CUSTOMER',
         now: oneHourBefore,
       }),
@@ -274,7 +272,6 @@ describe('booking-rules cancellation and status transitions', () => {
       assertCancellationAllowed({
         status: BookingStatus.CONFIRMED,
         startAt: matchStart,
-        endAt: new Date(matchStart.getTime() + 3600_000),
         actorRole: 'OWNER',
         now: oneHourBefore,
       }),
@@ -286,7 +283,6 @@ describe('booking-rules cancellation and status transitions', () => {
       assertCancellationAllowed({
         status: BookingStatus.COMPLETED,
         startAt: matchStart,
-        endAt: new Date(matchStart.getTime() + 3600_000),
         actorRole: 'ADMIN',
         now: new Date(matchStart.getTime() - 5 * 3600_000),
       }),
@@ -296,7 +292,6 @@ describe('booking-rules cancellation and status transitions', () => {
       assertCancellationAllowed({
         status: BookingStatus.CONFIRMED,
         startAt: matchStart,
-        endAt: new Date(matchStart.getTime() + 3600_000),
         actorRole: 'OWNER',
         now: new Date(matchStart.getTime() + 1000),
       }),
