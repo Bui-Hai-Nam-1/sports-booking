@@ -1,4 +1,5 @@
 import { TransformInterceptor } from './transform.interceptor';
+import { StreamableFile } from '@nestjs/common';
 import { of } from 'rxjs';
 
 describe('TransformInterceptor', () => {
@@ -45,6 +46,16 @@ describe('TransformInterceptor', () => {
 
     interceptor.intercept(createContext(), callHandler).subscribe((res: any) => {
       expect(res).toEqual(payload);
+      done();
+    });
+  });
+
+  it('does not wrap StreamableFile responses', (done) => {
+    const file = new StreamableFile(Buffer.from('file-content'));
+    const callHandler = { handle: () => of(file) };
+
+    interceptor.intercept(createContext(), callHandler).subscribe((res: any) => {
+      expect(res).toBe(file);
       done();
     });
   });
