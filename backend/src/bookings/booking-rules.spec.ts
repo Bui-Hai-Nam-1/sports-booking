@@ -300,7 +300,6 @@ describe('booking-rules cancellation and status transitions', () => {
 
   it('enforces valid booking status state-machine transitions', () => {
     const beforeStart = new Date(matchStart.getTime() - 3600_000);
-    const afterStart = new Date(matchStart.getTime() + 3600_000);
     const beforeEnd = new Date(matchStart.getTime() + 30 * 60_000);
     const afterEnd = new Date(matchStart.getTime() + 90 * 60_000);
 
