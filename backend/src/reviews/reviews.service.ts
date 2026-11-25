@@ -156,7 +156,19 @@ export class ReviewsService {
     };
   }
 
-  async getReviewByBooking(bookingId: string) {
+  async getReviewByBooking(bookingId: string, userId: string) {
+    const booking = await this.prisma.booking.findUnique({
+      where: { id: bookingId },
+      select: { id: true, userId: true },
+    });
+
+    if (!booking) {
+      throw new NotFoundException('Không tìm thấy lượt đặt sân');
+    }
+    if (booking.userId !== userId) {
+      throw new ForbiddenException('Bạn không có quyền xem đánh giá của lượt đặt sân này');
+    }
+
     return this.prisma.review.findUnique({
       where: { bookingId },
       include: {
