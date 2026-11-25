@@ -587,9 +587,10 @@ export function assertValidStatusTransition(params: {
   currentStatus: BookingStatus;
   nextStatus: BookingStatus;
   startAt: Date;
+  endAt: Date;
   now?: Date;
 }): void {
-  const { currentStatus, nextStatus, startAt, now = new Date() } = params;
+  const { currentStatus, nextStatus, startAt, endAt, now = new Date() } = params;
   const allowed = BOOKING_STATUS_TRANSITIONS[currentStatus];
 
   if (!allowed.includes(nextStatus)) {
@@ -600,10 +601,10 @@ export function assertValidStatusTransition(params: {
 
   if (
     nextStatus === BookingStatus.COMPLETED &&
-    now.getTime() < startAt.getTime()
+    now.getTime() < endAt.getTime()
   ) {
     throw new BadRequestException(
-      'Cannot mark booking as COMPLETED before start time',
+      'Cannot mark booking as COMPLETED before end time',
     );
   }
 
