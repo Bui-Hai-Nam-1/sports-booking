@@ -184,6 +184,47 @@ describe('booking-rules availability and pricing', () => {
     });
   });
 
+  it('supports Member 2 percentage surcharge pricing (increasePercent on STANDARD)', () => {
+    const surchargeRules: PricingRuleWindow[] = [
+      {
+        type: PricingType.STANDARD,
+        pricePerHour: 200000,
+        weekday: null,
+        startsAt: '06:00',
+        endsAt: '22:00',
+      },
+      {
+        type: PricingType.WEEKEND,
+        pricePerHour: null,
+        increasePercent: 15,
+        weekday: null,
+        startsAt: '06:00',
+        endsAt: '22:00',
+      },
+      {
+        type: PricingType.PEAK,
+        pricePerHour: null,
+        increasePercent: 20,
+        weekday: null,
+        startsAt: '17:00',
+        endsAt: '21:00',
+      },
+    ];
+
+    expect(resolveSlotPricing(9 * 60, 10 * 60, 2, surchargeRules)).toEqual({
+      price: 200000,
+      pricingType: PricingType.STANDARD,
+    });
+    expect(resolveSlotPricing(9 * 60, 10 * 60, 6, surchargeRules)).toEqual({
+      price: 230000,
+      pricingType: PricingType.WEEKEND,
+    });
+    expect(resolveSlotPricing(18 * 60, 19 * 60, 6, surchargeRules)).toEqual({
+      price: 270000,
+      pricingType: PricingType.PEAK,
+    });
+  });
+
   it('merges contiguous slots and rejects gaps or non-hourly durations', () => {
     const s1 = {
       startAt: buildDateTimeFromLocal(sampleDate, '08:00'),
@@ -299,14 +340,17 @@ describe('booking-rules cancellation and status transitions', () => {
   });
 
   it('enforces valid booking status state-machine transitions', () => {
+    const matchEnd = new Date(matchStart.getTime() + 3600_000);
     const beforeStart = new Date(matchStart.getTime() - 3600_000);
-    const afterStart = new Date(matchStart.getTime() + 3600_000);
+    const duringMatch = new Date(matchStart.getTime() + 1800_000);
+    const afterEnd = new Date(matchEnd.getTime() + 60_000);
 
     expect(() =>
       assertValidStatusTransition({
         currentStatus: BookingStatus.PENDING,
         nextStatus: BookingStatus.CONFIRMED,
         startAt: matchStart,
+        endAt: matchEnd,
         now: beforeStart,
       }),
     ).not.toThrow();
@@ -316,7 +360,8 @@ describe('booking-rules cancellation and status transitions', () => {
         currentStatus: BookingStatus.CONFIRMED,
         nextStatus: BookingStatus.COMPLETED,
         startAt: matchStart,
-        now: beforeStart,
+        endAt: matchEnd,
+        now: duringMatch,
       }),
     ).toThrow(BadRequestException);
 
@@ -325,7 +370,8 @@ describe('booking-rules cancellation and status transitions', () => {
         currentStatus: BookingStatus.CONFIRMED,
         nextStatus: BookingStatus.COMPLETED,
         startAt: matchStart,
-        now: afterStart,
+        endAt: matchEnd,
+        now: afterEnd,
       }),
     ).not.toThrow();
 
@@ -334,6 +380,7 @@ describe('booking-rules cancellation and status transitions', () => {
         currentStatus: BookingStatus.CANCELLED,
         nextStatus: BookingStatus.CONFIRMED,
         startAt: matchStart,
+        endAt: matchEnd,
         now: beforeStart,
       }),
     ).toThrow(BadRequestException);

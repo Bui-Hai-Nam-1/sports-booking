@@ -278,7 +278,7 @@ export class BookingsService {
       userId: user.id,
       ...(query.status ? { status: query.status } : {}),
       ...(query.courtId ? { courtId: query.courtId } : {}),
-      ...(this.buildDateFilter(query.date)),
+      ...(this.buildDateRangeFilter(query.dateFrom, query.dateTo, query.date)),
     };
 
     const [items, total] = await Promise.all([
@@ -316,7 +316,7 @@ export class BookingsService {
     const where: Prisma.BookingWhereInput = {
       ...(query.status ? { status: query.status } : {}),
       ...(query.courtId ? { courtId: query.courtId } : {}),
-      ...(this.buildDateFilter(query.date)),
+      ...(this.buildDateRangeFilter(query.dateFrom, query.dateTo, query.date)),
       court: {
         ...(query.venueId ? { venueId: query.venueId } : {}),
         ...(user.role === 'OWNER' ? { venue: { ownerId: user.id } } : {}),
@@ -448,6 +448,7 @@ export class BookingsService {
         currentStatus: booking.status,
         nextStatus: dto.status,
         startAt: booking.startAt,
+        endAt: booking.endAt,
         now,
       });
 
@@ -483,18 +484,35 @@ export class BookingsService {
     });
   }
 
-  private buildDateFilter(rawDate?: string): Prisma.BookingWhereInput {
-    if (!rawDate) {
+  private buildDateRangeFilter(
+    rawDateFrom?: string,
+    rawDateTo?: string,
+    legacyDate?: string,
+  ): Prisma.BookingWhereInput {
+    const dateFrom = rawDateFrom ?? rawDateTo ?? legacyDate;
+    const dateTo = rawDateTo ?? rawDateFrom ?? legacyDate;
+
+    if (!dateFrom || !dateTo) {
       return {};
     }
-    if (!isValidDateString(rawDate)) {
-      throw new BadRequestException(`Invalid date filter "${rawDate}"`);
+    if (!isValidDateString(dateFrom)) {
+      throw new BadRequestException(`Invalid dateFrom filter "${dateFrom}"`);
     }
-    const dayStart = buildDateTimeFromLocal(rawDate, '00:00');
-    const dayEnd = buildDateTimeFromLocal(addDaysToDateString(rawDate, 1), '00:00');
+    if (!isValidDateString(dateTo)) {
+      throw new BadRequestException(`Invalid dateTo filter "${dateTo}"`);
+    }
+    if (dateFrom > dateTo) {
+      throw new BadRequestException('dateFrom must be on or before dateTo');
+    }
+
+    const rangeStart = buildDateTimeFromLocal(dateFrom, '00:00');
+    const rangeEnd = buildDateTimeFromLocal(
+      addDaysToDateString(dateTo, 1),
+      '00:00',
+    );
     return {
-      startAt: { lt: dayEnd },
-      endAt: { gt: dayStart },
+      startAt: { lt: rangeEnd },
+      endAt: { gt: rangeStart },
     };
   }
 }

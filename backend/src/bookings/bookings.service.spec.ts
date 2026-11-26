@@ -333,6 +333,7 @@ describe('BookingsService', () => {
       id: 'bk-1',
       userId: customer.id,
       startAt: buildDateTimeFromLocal(futureDate, '18:00'),
+      endAt: buildDateTimeFromLocal(futureDate, '19:00'),
       status: BookingStatus.PENDING,
       court: { venue: { ownerId: owner.id } },
     };
@@ -371,9 +372,17 @@ describe('BookingsService', () => {
     expect(mine.meta.totalPages).toBe(1);
 
     const managed = await service.listManagedBookings(admin, {
-      date: futureDate,
+      dateFrom: futureDate,
+      dateTo: futureDate,
     });
     expect(managed.items).toHaveLength(1);
+
+    await expect(
+      service.listMyBookings(customer, {
+        dateFrom: '2099-06-20',
+        dateTo: '2099-06-15',
+      }),
+    ).rejects.toThrow(BadRequestException);
 
     await expect(service.listManagedBookings(customer, {})).rejects.toThrow(
       ForbiddenException,

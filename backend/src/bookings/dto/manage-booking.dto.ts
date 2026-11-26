@@ -49,6 +49,18 @@ export class ListBookingsQueryDto {
   date?: string;
 
   @IsOptional()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, {
+    message: 'dateFrom must use YYYY-MM-DD format',
+  })
+  dateFrom?: string;
+
+  @IsOptional()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, {
+    message: 'dateTo must use YYYY-MM-DD format',
+  })
+  dateTo?: string;
+
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)

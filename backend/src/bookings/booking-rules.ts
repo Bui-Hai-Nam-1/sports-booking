@@ -170,7 +170,7 @@ export function resolveDayOpeningWindow(
 
 /**
  * Resolves the price & pricing tier for a specific [slotStartMinutes, slotEndMinutes) on weekday.
- * Precedence: day-specific PEAK > day-specific WEEKEND/STANDARD > all-days PEAK > all-days WEEKEND > all-days STANDARD.
+ * Supports both direct fixed pricing rules and Member 2's percentage surcharge rules (increasePercent on STANDARD base).
  */
 export function resolveSlotPricing(
   slotStartMinutes: number,
@@ -191,50 +191,93 @@ export function resolveSlotPricing(
     );
   });
 
-  const scoreRule = (rule: PricingRuleWindow): number => {
-    const specificity = rule.weekday === weekday ? 10 : 0;
-    const typeWeight =
-      rule.type === PricingType.PEAK
-        ? 3
-        : rule.type === PricingType.WEEKEND && isWeekendDay
-          ? 2
-          : rule.type === PricingType.STANDARD
-            ? 1
-            : 0;
-    // Ignore WEEKEND rules on weekdays unless nothing else matches.
-    if (rule.type === PricingType.WEEKEND && !isWeekendDay) {
-      return -1;
-    }
-    return specificity + typeWeight;
-  };
-
-  const ranked = coveringRules
-    .map((rule) => ({ rule, score: scoreRule(rule) }))
-    .filter((entry) => entry.score >= 0)
-    .sort((a, b) => b.score - a.score);
-
-  if (ranked.length > 0) {
-    return {
-      price: toNumericPrice(ranked[0].rule.pricePerHour),
-      pricingType: ranked[0].rule.type,
-    };
-  }
+  const standardRules = coveringRules
+    .filter(
+      (rule) =>
+        rule.type === PricingType.STANDARD &&
+        rule.pricePerHour !== null &&
+        rule.pricePerHour !== undefined,
+    )
+    .sort(
+      (left, right) =>
+        Number(right.weekday !== null) - Number(left.weekday !== null),
+    );
 
   const fallbackStandard = rules.find(
     (rule) =>
       rule.type === PricingType.STANDARD &&
+      rule.pricePerHour !== null &&
+      rule.pricePerHour !== undefined &&
       (rule.weekday === null || rule.weekday === weekday),
   );
-  if (fallbackStandard) {
+
+  const basePrice = standardRules[0]?.pricePerHour != null
+    ? toNumericPrice(standardRules[0].pricePerHour)
+    : fallbackStandard?.pricePerHour != null
+      ? toNumericPrice(fallbackStandard.pricePerHour)
+      : DEFAULT_FALLBACK_PRICE_PER_HOUR;
+
+  // Check if any WEEKEND / PEAK rule carries an explicit fixed pricePerHour.
+  const directSpecialRules = coveringRules
+    .filter((rule) => {
+      if (rule.pricePerHour === null || rule.pricePerHour === undefined) {
+        return false;
+      }
+      if (rule.type === PricingType.PEAK) {
+        return true;
+      }
+      return rule.type === PricingType.WEEKEND && isWeekendDay;
+    })
+    .sort((left, right) => {
+      const leftScore =
+        (left.weekday === weekday ? 10 : 0) +
+        (left.type === PricingType.PEAK ? 3 : 2);
+      const rightScore =
+        (right.weekday === weekday ? 10 : 0) +
+        (right.type === PricingType.PEAK ? 3 : 2);
+      return rightScore - leftScore;
+    });
+
+  if (directSpecialRules.length > 0 && directSpecialRules[0].pricePerHour != null) {
     return {
-      price: toNumericPrice(fallbackStandard.pricePerHour),
-      pricingType: PricingType.STANDARD,
+      price: toNumericPrice(directSpecialRules[0].pricePerHour),
+      pricingType: directSpecialRules[0].type,
+    };
+  }
+
+  // Otherwise apply percentage surcharges (increasePercent) on top of basePrice.
+  const applicableSurcharges = coveringRules.filter((rule) => {
+    if (rule.increasePercent === null || rule.increasePercent === undefined) {
+      return false;
+    }
+    if (rule.type === PricingType.PEAK) {
+      return true;
+    }
+    return rule.type === PricingType.WEEKEND && isWeekendDay;
+  });
+
+  if (applicableSurcharges.length > 0) {
+    const totalIncreasePercent = applicableSurcharges.reduce(
+      (sum, rule) => sum + (rule.increasePercent ?? 0),
+      0,
+    );
+    const hasPeak = applicableSurcharges.some(
+      (rule) => rule.type === PricingType.PEAK,
+    );
+    return {
+      price: Math.round(basePrice * (1 + totalIncreasePercent / 100)),
+      pricingType: hasPeak ? PricingType.PEAK : PricingType.WEEKEND,
     };
   }
 
   return {
-    price: DEFAULT_FALLBACK_PRICE_PER_HOUR,
-    pricingType: isWeekendDay ? PricingType.WEEKEND : PricingType.STANDARD,
+    price: basePrice,
+    pricingType:
+      standardRules.length > 0
+        ? PricingType.STANDARD
+        : isWeekendDay
+          ? PricingType.WEEKEND
+          : PricingType.STANDARD,
   };
 }
 
@@ -587,9 +630,10 @@ export function assertValidStatusTransition(params: {
   currentStatus: BookingStatus;
   nextStatus: BookingStatus;
   startAt: Date;
+  endAt: Date;
   now?: Date;
 }): void {
-  const { currentStatus, nextStatus, startAt, now = new Date() } = params;
+  const { currentStatus, nextStatus, startAt, endAt, now = new Date() } = params;
   const allowed = BOOKING_STATUS_TRANSITIONS[currentStatus];
 
   if (!allowed.includes(nextStatus)) {
@@ -600,10 +644,10 @@ export function assertValidStatusTransition(params: {
 
   if (
     nextStatus === BookingStatus.COMPLETED &&
-    now.getTime() < startAt.getTime()
+    now.getTime() < endAt.getTime()
   ) {
     throw new BadRequestException(
-      'Cannot mark booking as COMPLETED before start time',
+      'Cannot mark booking as COMPLETED before end time',
     );
   }
 

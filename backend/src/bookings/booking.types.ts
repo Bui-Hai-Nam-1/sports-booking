@@ -44,7 +44,8 @@ export interface OpeningHourWindow {
 export interface PricingRuleWindow {
   id?: string;
   type: PricingType;
-  pricePerHour: number | string | { toString(): string };
+  pricePerHour?: number | string | { toString(): string } | null;
+  increasePercent?: number | null;
   weekday: number | null;
   startsAt: string;
   endsAt: string;
