@@ -18,6 +18,8 @@ export interface ListBookingsParams {
   venueId?: string;
   courtId?: string;
   date?: string;
+  dateFrom?: string;
+  dateTo?: string;
   page?: number;
   limit?: number;
 }

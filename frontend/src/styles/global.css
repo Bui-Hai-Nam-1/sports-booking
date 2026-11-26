@@ -133,8 +133,35 @@ thead .matrix-sticky-col { background: #f8fafc; z-index: 3; }
 .alert-success a { text-decoration: underline; font-weight: 700; }
 .empty-box, .matrix-empty, .matrix-loading { color: #64748b; margin: 0; }
 
+/* My Bookings & Owner Booking Management */
+.tab-bar { display: flex; gap: 10px; flex-wrap: wrap; }
+.bookings-filter-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; align-items: end; }
+.booking-cards { display: flex; flex-direction: column; gap: 14px; }
+.booking-card { display: flex; flex-direction: column; gap: 12px; }
+.booking-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.booking-card-top h3 { margin: 4px 0; font-size: 1.08rem; }
+.booking-code { font-size: .78rem; color: #64748b; font-family: ui-monospace, monospace; }
+.booking-meta-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; padding: 10px 12px; background: #f8fafc; border-radius: 10px; }
+.booking-meta-grid small { display: block; font-size: .76rem; color: #64748b; margin-bottom: 2px; }
+.booking-note-line { margin: 0; font-size: .88rem; color: #334155; }
+.booking-note-line.is-danger { color: #991b1b; }
+.booking-card-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding-top: 8px; border-top: 1px solid #f1f5f9; }
+.policy-hint { font-size: .82rem; color: #64748b; }
+.cancel-box { display: flex; flex-direction: column; gap: 10px; padding: 12px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; }
+.cancel-box input { width: 100%; padding: 8px 12px; border: 1px solid #fca5a5; border-radius: 8px; font: inherit; }
+
+.status-badge { padding: 4px 11px; border-radius: 999px; font-size: .78rem; font-weight: 700; white-space: nowrap; }
+.status-pending { background: #fef3c7; color: #92400e; }
+.status-confirmed { background: #dbeafe; color: #1e40af; }
+.status-completed { background: #dcfce7; color: #166534; }
+.status-cancelled { background: #f1f5f9; color: #475569; }
+.status-rejected { background: #fee2e2; color: #991b1b; }
+
+.pagination-row { display: flex; align-items: center; justify-content: center; gap: 14px; font-size: .9rem; color: #475569; }
+
 @media (max-width: 1024px) {
   .filter-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .bookings-filter-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .booking-workspace { grid-template-columns: 1fr; }
 }
 @media (max-width: 650px) {
@@ -142,5 +169,5 @@ thead .matrix-sticky-col { background: #f8fafc; z-index: 3; }
   nav { flex-wrap: wrap; gap: 14px; }
   .feature-grid { grid-template-columns: 1fr; }
   .hero { padding: 48px 0; }
-  .filter-grid { grid-template-columns: 1fr; }
+  .filter-grid, .bookings-filter-row { grid-template-columns: 1fr; }
 }
