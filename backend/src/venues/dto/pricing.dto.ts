@@ -8,6 +8,7 @@ import {
   Matches,
   Max,
   Min,
+  ValidateIf,
 } from 'class-validator';
 import { PricingType } from '@prisma/client';
 
@@ -15,10 +16,18 @@ export class CreatePricingRuleDto {
   @IsEnum(PricingType)
   type!: PricingType;
 
+  @ValidateIf((dto: CreatePricingRuleDto) => dto.type === PricingType.STANDARD)
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
-  pricePerHour!: number;
+  pricePerHour?: number;
+
+  @ValidateIf((dto: CreatePricingRuleDto) => dto.type !== PricingType.STANDARD)
+  @Type(() => Number)
+  @IsInt()
+  @Min(10)
+  @Max(20)
+  increasePercent?: number;
 
   @IsOptional()
   @Type(() => Number)

@@ -153,6 +153,10 @@ h1 { max-width: 760px; font-size: clamp(2.2rem, 6vw, 4.5rem); line-height: 1.05;
 .media-preview figcaption { overflow: hidden; padding: 6px 25px 7px 8px; color: #475569; font-size: .68rem; text-overflow: ellipsis; white-space: nowrap; }
 .media-preview button { position: absolute; top: 5px; right: 5px; display: grid; width: 23px; height: 23px; place-items: center; border: 0; border-radius: 50%; color: white; background: rgb(15 23 42 / 75%); font-size: 1rem; cursor: pointer; }
 .media-storage-hint { margin: 10px 0 0; color: #64748b; font-size: .72rem; }
+.initial-court-pricing { margin-top: 20px; padding: 16px; border: 1px solid #dcebe5; border-radius: 12px; background: #f7fbf9; }
+.initial-court-pricing h3 { margin: 0 0 4px; color: #183b35; font-size: .98rem; }
+.initial-court-pricing .venue-form-fields { margin-top: 14px; }
+.pricing-hint { margin: 12px 0; padding: 10px 12px; border-radius: 9px; color: #475569; background: #f1f7f5; font-size: .8rem; line-height: 1.5; }
 .media-error, .modal-error { margin: 12px 0 0; font-size: .82rem; }
 .venue-modal-footer { position: sticky; bottom: 0; display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 18px -30px 0; padding: 14px 30px; border-top: 1px solid #e8edf1; background: rgb(255 255 255 / 96%); }
 .venue-modal-footer > span { color: #64748b; font-size: .75rem; }

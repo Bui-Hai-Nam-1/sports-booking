@@ -149,6 +149,9 @@ export function VenueManagementPage() {
         imageUrls,
         videoUrls,
         sportTypes: draft.sportTypes,
+        initialCourtPricePerHour: draft.initialCourtPricePerHour,
+        initialPriceStartsAt: draft.initialPriceStartsAt,
+        initialPriceEndsAt: draft.initialPriceEndsAt,
       });
       return data;
     },
@@ -409,6 +412,8 @@ interface VenueEditorProps {
 }
 
 function VenueEditor(props: VenueEditorProps) {
+  const [newPricingType, setNewPricingType] = useState<PricingType>("STANDARD");
+  const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
   const {
     venue,
     hours,
@@ -692,13 +697,19 @@ function VenueEditor(props: VenueEditorProps) {
                   <div className="rule-row" key={rule.id}>
                     <span>
                       <strong>{priceTypeLabel[rule.type]}</strong> ·{" "}
-                      {rule.weekday === null
-                        ? "Tất cả ngày"
-                        : weekdays[rule.weekday]}{" "}
+                      {rule.type === "WEEKEND"
+                        ? rule.weekday === null
+                          ? "Thứ bảy & Chủ nhật"
+                          : weekdays[rule.weekday]
+                        : rule.weekday === null
+                          ? "Tất cả ngày"
+                          : weekdays[rule.weekday]}{" "}
                       · {rule.startsAt}–{rule.endsAt}
                     </span>
                     <strong>
-                      {Number(rule.pricePerHour).toLocaleString("vi-VN")} đ/giờ
+                      {rule.type === "STANDARD"
+                        ? `${Number(rule.pricePerHour).toLocaleString("vi-VN")} đ/giờ`
+                        : `+${rule.increasePercent}%`}
                     </strong>
                     <button
                       type="button"
@@ -717,77 +728,195 @@ function VenueEditor(props: VenueEditorProps) {
                   </div>
                 ))}
               </div>
-              <form
-                className="inline-form"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  const formElement = event.currentTarget;
-                  const form = new FormData(formElement);
-                  void runAction(async () => {
-                    await api.post(`/courts/${selectedCourt.id}/pricing`, {
-                      type: form.get("type"),
-                      pricePerHour: Number(form.get("pricePerHour")),
-                      weekday:
-                        form.get("weekday") === ""
-                          ? undefined
-                          : Number(form.get("weekday")),
-                      startsAt: form.get("startsAt"),
-                      endsAt: form.get("endsAt"),
-                    });
-                    formElement.reset();
-                    await refreshAll();
-                  });
-                }}
+              <p className="pricing-hint">
+                Giá cơ bản được tính theo giờ. Phụ thu cuối tuần và giờ vàng
+                cộng dồn khi cùng áp dụng; mỗi mức tăng từ 10% đến 20%.
+              </p>
+              <button
+                type="button"
+                className="button button-primary"
+                onClick={() => setIsPricingModalOpen(true)}
               >
-                <label>
-                  Loại giá
-                  <select name="type">
-                    <option value="STANDARD">Giá thường</option>
-                    <option value="WEEKEND">Cuối tuần</option>
-                    <option value="PEAK">Giờ vàng</option>
-                  </select>
-                </label>
-                <label>
-                  Áp dụng thứ
-                  <select name="weekday">
-                    <option value="">Mọi ngày</option>
-                    {weekdays.map((day, value) => (
-                      <option value={value} key={day}>
-                        {day}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Giá/giờ (VNĐ)
-                  <input
-                    name="pricePerHour"
-                    type="number"
-                    min="0"
-                    step="1000"
-                    required
-                  />
-                </label>
-                <label>
-                  Từ
-                  <input
-                    name="startsAt"
-                    type="time"
-                    defaultValue="06:00"
-                    required
-                  />
-                </label>
-                <label>
-                  Đến
-                  <input
-                    name="endsAt"
-                    type="time"
-                    defaultValue="22:00"
-                    required
-                  />
-                </label>
-                <button className="button button-primary">Thêm mức giá</button>
-              </form>
+                Thêm mức giá
+              </button>
+              {isPricingModalOpen && (
+                <div
+                  className="venue-modal-backdrop"
+                  role="presentation"
+                  onMouseDown={(event) => {
+                    if (event.target === event.currentTarget) {
+                      setIsPricingModalOpen(false);
+                    }
+                  }}
+                >
+                  <section
+                    className="venue-modal pricing-modal"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="pricing-modal-title"
+                  >
+                    <header className="venue-modal-header">
+                      <div>
+                        <span className="modal-step">CẤU HÌNH GIÁ</span>
+                        <h2 id="pricing-modal-title">Thêm mức giá cho sân</h2>
+                        <p>
+                          Giá thường là giá gốc; cuối tuần và giờ vàng được
+                          tính phụ thu theo phần trăm.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        className="modal-close"
+                        aria-label="Đóng biểu mẫu giá"
+                        onClick={() => setIsPricingModalOpen(false)}
+                      >
+                        ×
+                      </button>
+                    </header>
+                    <form
+                      className="venue-registration-form"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        const formElement = event.currentTarget;
+                        const form = new FormData(formElement);
+                        void runAction(async () => {
+                          await api.post(
+                            `/courts/${selectedCourt.id}/pricing`,
+                            {
+                              type: newPricingType,
+                              ...(newPricingType === "STANDARD"
+                                ? {
+                                    pricePerHour: Number(
+                                      form.get("pricePerHour"),
+                                    ),
+                                  }
+                                : {
+                                    increasePercent: Number(
+                                      form.get("increasePercent"),
+                                    ),
+                                  }),
+                              weekday:
+                                newPricingType === "WEEKEND" ||
+                                form.get("weekday") === ""
+                                  ? undefined
+                                  : Number(form.get("weekday")),
+                              startsAt: form.get("startsAt"),
+                              endsAt: form.get("endsAt"),
+                            },
+                          );
+                          await refreshAll();
+                          setIsPricingModalOpen(false);
+                        });
+                      }}
+                    >
+                      <div className="venue-form-fields">
+                        <label>
+                          Loại giá
+                          <select
+                            name="type"
+                            value={newPricingType}
+                            onChange={(event) =>
+                              setNewPricingType(
+                                event.target.value as PricingType,
+                              )
+                            }
+                          >
+                            <option value="STANDARD">Giá thường</option>
+                            <option value="WEEKEND">Phụ thu cuối tuần</option>
+                            <option value="PEAK">Phụ thu giờ vàng</option>
+                          </select>
+                        </label>
+                        {newPricingType === "WEEKEND" ? (
+                          <p className="pricing-hint">
+                            Tự động áp dụng vào thứ bảy và chủ nhật.
+                          </p>
+                        ) : (
+                          <label>
+                            Áp dụng thứ
+                            <select name="weekday">
+                              <option value="">Mọi ngày</option>
+                              {weekdays.map((day, value) => (
+                                <option value={value} key={day}>
+                                  {day}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        )}
+                        {newPricingType === "STANDARD" ? (
+                          <label>
+                            Giá cơ bản/giờ (VNĐ)
+                            <input
+                              name="pricePerHour"
+                              type="number"
+                              min="0"
+                              step="1000"
+                              required
+                            />
+                          </label>
+                        ) : (
+                          <label>
+                            Tỷ lệ phụ thu (%)
+                            <input
+                              name="increasePercent"
+                              type="number"
+                              min="10"
+                              max="20"
+                              step="1"
+                              defaultValue="10"
+                              required
+                            />
+                            <small>
+                              Mức tăng từ 10% đến 20%; phụ thu cuối tuần và giờ
+                              vàng sẽ cộng dồn.
+                            </small>
+                          </label>
+                        )}
+                        <label>
+                          Từ
+                          <input
+                            name="startsAt"
+                            type="time"
+                            defaultValue="06:00"
+                            required
+                          />
+                        </label>
+                        <label>
+                          Đến
+                          <input
+                            name="endsAt"
+                            type="time"
+                            defaultValue="22:00"
+                            required
+                          />
+                        </label>
+                      </div>
+                      <footer className="venue-modal-footer">
+                        <span>
+                          {newPricingType === "STANDARD"
+                            ? "Giá áp dụng cho mỗi giờ đặt."
+                            : "Chọn tỷ lệ phụ thu và khung giờ áp dụng."}
+                        </span>
+                        <div>
+                          <button
+                            type="button"
+                            className="button button-muted"
+                            onClick={() => setIsPricingModalOpen(false)}
+                          >
+                            Hủy
+                          </button>
+                          <button
+                            type="submit"
+                            className="button button-primary"
+                          >
+                            Lưu mức giá
+                          </button>
+                        </div>
+                      </footer>
+                    </form>
+                  </section>
+                </div>
+              )}
             </>
           )}
         </div>

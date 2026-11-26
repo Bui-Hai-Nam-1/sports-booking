@@ -19,6 +19,7 @@ All paths are prefixed with `/api`.
 | `PATCH /courts/:courtId` | Owner/Admin | Edit a court |
 | `DELETE /courts/:courtId` | Owner/Admin | Deactivate a court |
 | `POST /courts/:courtId/pricing` | Owner/Admin | Add a time/day price rule |
+| `GET /courts/:courtId/pricing/quote?weekday=6&time=19:00` | Public | Get the hourly rate including matching surcharges |
 | `PATCH /pricing/:ruleId` | Owner/Admin | Edit a price rule |
 | `DELETE /pricing/:ruleId` | Owner/Admin | Delete a price rule |
 | `GET /courts/:courtId/maintenance` | Owner/Admin | List maintenance periods |
@@ -30,7 +31,11 @@ All paths are prefixed with `/api`.
 `dayOfWeek` uses JavaScript numbering (`0` Sunday through `6` Saturday).
 An all-days price rule uses `dayOfWeek: null`; it can coexist with a
 day-specific rule as a base rate and override. Rules for the same day cannot
-overlap. Maintenance blocks use half-open intervals `[startAt, endAt)` and
+overlap. `STANDARD` rules hold the base hourly rate. `WEEKEND` rules apply to
+Saturday and Sunday, while `PEAK` rules apply to their configured time window.
+Both surcharge types accept a 10–20% increase and are added together when
+both match. The quote endpoint returns the calculated hourly price and is
+intended for the booking flow to use for each selected hour. Maintenance blocks use half-open intervals `[startAt, endAt)` and
 cannot overlap pending/confirmed bookings or another maintenance block.
 
 Venue, court, and opening-hour updates are validated using the global

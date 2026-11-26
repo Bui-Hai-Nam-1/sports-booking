@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -14,6 +15,7 @@ import { AppRole, Roles } from '../common/auth/roles.decorator';
 import { RolesGuard } from '../common/auth/roles.guard';
 import { CreateMaintenanceBlockDto } from './dto/maintenance.dto';
 import { CreatePricingRuleDto } from './dto/pricing.dto';
+import { PricingQuoteDto } from './dto/pricing-quote.dto';
 import { UpdateCourtDto } from './dto/court.dto';
 import { VenuesService } from './venues.service';
 
@@ -51,6 +53,21 @@ export class CourtsController {
   listPricing(@Param('courtId') courtId: string, @Req() request: OptionalUserRequest) {
     const ownerId = request.user?.role === 'OWNER' ? request.user.id : undefined;
     return this.venues.listPricingRules(courtId, ownerId);
+  }
+
+  @Get(':courtId/pricing/quote')
+  quotePricing(
+    @Param('courtId') courtId: string,
+    @Query() query: PricingQuoteDto,
+    @Req() request: OptionalUserRequest,
+  ) {
+    const ownerId = request.user?.role === 'OWNER' ? request.user.id : undefined;
+    return this.venues.quoteHourlyPrice(
+      courtId,
+      query.weekday,
+      query.time,
+      ownerId,
+    );
   }
 
   @Post(':courtId/pricing')

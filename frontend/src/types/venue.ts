@@ -31,7 +31,8 @@ export interface OpeningHour {
 export interface PricingRule {
   id: string;
   type: PricingType;
-  pricePerHour: string | number;
+  pricePerHour: string | number | null;
+  increasePercent: number | null;
   weekday: number | null;
   startsAt: string;
   endsAt: string;

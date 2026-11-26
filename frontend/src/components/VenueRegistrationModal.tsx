@@ -12,6 +12,9 @@ export interface VenueRegistrationDraft {
   address: string;
   sportTypes: string[];
   description?: string;
+  initialCourtPricePerHour: number;
+  initialPriceStartsAt: string;
+  initialPriceEndsAt: string;
   imageFiles: File[];
   videoFiles: File[];
 }
@@ -124,11 +127,21 @@ export function VenueRegistrationModal({
       setFileError("Vui lòng nhập ít nhất một môn thể thao.");
       return;
     }
+    const initialCourtPricePerHour = Number(
+      values.get("initialCourtPricePerHour"),
+    );
+    if (!Number.isFinite(initialCourtPricePerHour) || initialCourtPricePerHour < 0) {
+      setFileError("Vui lòng nhập giá sân hợp lệ theo giờ.");
+      return;
+    }
     await onSubmit({
       name: String(values.get("name") ?? "").trim(),
       address: String(values.get("address") ?? "").trim(),
       description: String(values.get("description") ?? "").trim() || undefined,
       sportTypes: [...new Set(sportTypes)],
+      initialCourtPricePerHour,
+      initialPriceStartsAt: String(values.get("initialPriceStartsAt") ?? "06:00"),
+      initialPriceEndsAt: String(values.get("initialPriceEndsAt") ?? "22:00"),
       imageFiles: images.map(({ file }) => file),
       videoFiles: videos.map(({ file }) => file),
     });
@@ -210,6 +223,49 @@ export function VenueRegistrationModal({
               />
             </label>
           </div>
+
+          <section className="initial-court-pricing">
+            <div className="media-section-heading">
+              <div>
+                <h3>Sân đầu tiên & giá theo giờ</h3>
+                <p>
+                  Tạo Sân 1 theo môn thể thao đầu tiên và cài giá cơ bản ngay
+                  khi đăng ký.
+                </p>
+              </div>
+            </div>
+            <div className="venue-form-fields">
+              <label>
+                Giá cơ bản (VNĐ/giờ) <span className="required-mark">*</span>
+                <input
+                  name="initialCourtPricePerHour"
+                  type="number"
+                  min="0"
+                  step="1000"
+                  required
+                  placeholder="Ví dụ: 150000"
+                />
+              </label>
+              <label>
+                Bắt đầu áp dụng
+                <input
+                  name="initialPriceStartsAt"
+                  type="time"
+                  defaultValue="06:00"
+                  required
+                />
+              </label>
+              <label>
+                Kết thúc áp dụng
+                <input
+                  name="initialPriceEndsAt"
+                  type="time"
+                  defaultValue="22:00"
+                  required
+                />
+              </label>
+            </div>
+          </section>
 
           <div className="venue-media-section">
             <div className="media-section-heading">

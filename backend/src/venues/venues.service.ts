@@ -65,8 +65,46 @@ export class VenuesService {
   }
 
   async createVenue(ownerId: string, dto: CreateVenueDto) {
+    const {
+      initialCourtPricePerHour,
+      initialPriceStartsAt = "06:00",
+      initialPriceEndsAt = "22:00",
+      ...venueData
+    } = dto;
+    if (
+      initialCourtPricePerHour !== undefined &&
+      initialPriceStartsAt >= initialPriceEndsAt
+    ) {
+      throw new BadRequestException(
+        "Initial court price start time must be earlier than end time",
+      );
+    }
     return this.prisma.venue.create({
-      data: { ...dto, ownerId, status: VenueStatus.PENDING },
+      data: {
+        ...venueData,
+        ownerId,
+        status: VenueStatus.PENDING,
+        ...(initialCourtPricePerHour === undefined
+          ? {}
+          : {
+              courts: {
+                create: {
+                  name: "Sân 1",
+                  sportType: dto.sportTypes[0],
+                  pricingRules: {
+                    create: {
+                      type: "STANDARD",
+                      pricePerHour: new Prisma.Decimal(
+                        initialCourtPricePerHour,
+                      ),
+                      startsAt: initialPriceStartsAt,
+                      endsAt: initialPriceEndsAt,
+                    },
+                  },
+                },
+              },
+            }),
+      },
       select: venueSummary,
     });
   }
@@ -206,12 +244,112 @@ export class VenuesService {
     });
   }
 
+  async quoteHourlyPrice(
+    courtId: string,
+    weekday: number,
+    time: string,
+    ownerId?: string,
+  ) {
+    await this.getCourtForRead(courtId, ownerId);
+    if (
+      !Number.isInteger(weekday) ||
+      weekday < 0 ||
+      weekday > 6 ||
+      !this.isTime(time)
+    ) {
+      throw new BadRequestException("A valid weekday and time are required");
+    }
+
+    const rules = await this.prisma.pricingRule.findMany({
+      where: { courtId },
+    });
+    const appliesAtTime = (rule: (typeof rules)[number]) =>
+      (rule.weekday === null || rule.weekday === weekday) &&
+      rule.startsAt <= time &&
+      time < rule.endsAt;
+    const baseRule = rules
+      .filter((rule) => rule.type === "STANDARD" && appliesAtTime(rule))
+      .sort(
+        (left, right) =>
+          Number(right.weekday !== null) - Number(left.weekday !== null),
+      )[0];
+
+    if (!baseRule || baseRule.pricePerHour === null) {
+      throw new NotFoundException(
+        "No standard hourly price is configured for this time",
+      );
+    }
+
+    const isWeekend = weekday === 0 || weekday === 6;
+    const increasePercent = rules
+      .filter((rule) => {
+        if (
+          !appliesAtTime(rule) ||
+          rule.increasePercent === null ||
+          rule.increasePercent === undefined
+        ) {
+          return false;
+        }
+        if (rule.type === "WEEKEND") return isWeekend;
+        return rule.type === "PEAK";
+      })
+      .reduce((total, rule) => total + (rule.increasePercent ?? 0), 0);
+    const basePricePerHour = Number(baseRule.pricePerHour);
+
+    return {
+      weekday,
+      time,
+      basePricePerHour,
+      increasePercent,
+      pricePerHour: Math.round(basePricePerHour * (1 + increasePercent / 100)),
+    };
+  }
+
   async createPricingRule(
     ownerId: string,
     courtId: string,
     dto: CreatePricingRuleDto,
   ) {
     await this.getOwnedCourt(ownerId, courtId);
+    if (
+      dto.type === "STANDARD" &&
+      (dto.pricePerHour === undefined || dto.increasePercent !== undefined)
+    ) {
+      throw new BadRequestException("Standard pricing requires a price per hour");
+    }
+    if (
+      dto.type !== "STANDARD" &&
+      (dto.increasePercent === undefined ||
+        dto.increasePercent < 10 ||
+        dto.increasePercent > 20 ||
+        dto.pricePerHour !== undefined)
+    ) {
+      throw new BadRequestException(
+        "Weekend and peak pricing require a 10–20% increase, not a separate hourly price",
+      );
+    }
+    const existingRules = await this.prisma.pricingRule.findMany({
+      where: { courtId, type: dto.type },
+    });
+    const hasConflictingRule = existingRules.some((rule) => {
+      const timeOverlaps =
+        dto.startsAt < rule.endsAt && dto.endsAt > rule.startsAt;
+      const weekdaysOverlap =
+        dto.weekday === null ||
+        dto.weekday === undefined ||
+        rule.weekday === null ||
+        dto.weekday === rule.weekday;
+      const isBaseRateOverride =
+        dto.type === "STANDARD" &&
+        ((dto.weekday === null || dto.weekday === undefined) !==
+          (rule.weekday === null));
+      return timeOverlaps && weekdaysOverlap && !isBaseRateOverride;
+    });
+    if (hasConflictingRule) {
+      throw new ConflictException(
+        "Pricing rules of the same type cannot overlap for the same day",
+      );
+    }
     if (dto.startsAt >= dto.endsAt) {
       throw new BadRequestException(
         "Pricing rule start time must be earlier than end time",
@@ -219,8 +357,16 @@ export class VenuesService {
     }
     return this.prisma.pricingRule.create({
       data: {
-        ...dto,
-        pricePerHour: new Prisma.Decimal(dto.pricePerHour),
+        type: dto.type,
+        pricePerHour:
+          dto.pricePerHour === undefined
+            ? null
+            : new Prisma.Decimal(dto.pricePerHour),
+        increasePercent:
+          dto.type === "STANDARD" ? null : dto.increasePercent,
+        weekday: dto.weekday,
+        startsAt: dto.startsAt,
+        endsAt: dto.endsAt,
         courtId,
       },
     });

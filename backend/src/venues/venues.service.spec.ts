@@ -67,10 +67,29 @@ describe('VenuesService', () => {
       address: '12 Đường X, Hà Nội',
       imageUrls: [],
       sportTypes: ['Football'],
+      initialCourtPricePerHour: 120000,
+      initialPriceStartsAt: '06:00',
+      initialPriceEndsAt: '22:00',
     });
 
     expect(prismaMock.venue.create).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ ownerId: 'owner-1', status: VenueStatus.PENDING }),
+      data: expect.objectContaining({
+        ownerId: 'owner-1',
+        status: VenueStatus.PENDING,
+        courts: {
+          create: {
+            name: 'Sân 1',
+            sportType: 'Football',
+            pricingRules: {
+              create: expect.objectContaining({
+                type: PricingType.STANDARD,
+                startsAt: '06:00',
+                endsAt: '22:00',
+              }),
+            },
+          },
+        },
+      }),
     }));
   });
 
@@ -214,14 +233,135 @@ describe('VenuesService', () => {
     prismaMock.pricingRule.create.mockResolvedValue({ id: 'rule-1' });
     await service.createPricingRule('owner-1', 'court-1', {
       type: PricingType.WEEKEND,
-      pricePerHour: 125000,
+      increasePercent: 15,
       weekday: 6,
       startsAt: '08:00',
       endsAt: '22:00',
     });
     expect(prismaMock.pricingRule.create).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ courtId: 'court-1', weekday: 6 }),
+      data: expect.objectContaining({
+        courtId: 'court-1',
+        weekday: 6,
+        pricePerHour: null,
+        increasePercent: 15,
+      }),
     }));
+  });
+
+  it('rejects overlapping rules of the same pricing type and weekday', async () => {
+    const { service, prismaMock } = createHarness();
+    prismaMock.court.findFirst.mockResolvedValue({ id: 'court-1' });
+    prismaMock.pricingRule.findMany.mockResolvedValue([
+      {
+        type: PricingType.STANDARD,
+        weekday: 6,
+        startsAt: '08:00',
+        endsAt: '12:00',
+      },
+    ] as never);
+
+    await expect(
+      service.createPricingRule('owner-1', 'court-1', {
+        type: PricingType.STANDARD,
+        pricePerHour: 120000,
+        weekday: 6,
+        startsAt: '11:00',
+        endsAt: '14:00',
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('adds weekend and peak surcharges to the standard hourly price', async () => {
+    const { service, prismaMock } = createHarness();
+    prismaMock.court.findFirst.mockResolvedValue({ id: 'court-1' });
+    prismaMock.pricingRule.findMany.mockResolvedValue([
+      {
+        type: PricingType.STANDARD,
+        pricePerHour: { toString: () => '100000' },
+        increasePercent: null,
+        weekday: null,
+        startsAt: '06:00',
+        endsAt: '23:00',
+      },
+      {
+        type: PricingType.WEEKEND,
+        pricePerHour: null,
+        increasePercent: 10,
+        weekday: null,
+        startsAt: '06:00',
+        endsAt: '23:00',
+      },
+      {
+        type: PricingType.PEAK,
+        pricePerHour: null,
+        increasePercent: 15,
+        weekday: null,
+        startsAt: '18:00',
+        endsAt: '21:00',
+      },
+    ] as never);
+
+    await expect(service.quoteHourlyPrice('court-1', 6, '19:00')).resolves.toEqual({
+      weekday: 6,
+      time: '19:00',
+      basePricePerHour: 100000,
+      increasePercent: 25,
+      pricePerHour: 125000,
+    });
+  });
+
+  it('does not apply weekend surcharges on weekdays', async () => {
+    const { service, prismaMock } = createHarness();
+    prismaMock.court.findFirst.mockResolvedValue({ id: 'court-1' });
+    prismaMock.pricingRule.findMany.mockResolvedValue([
+      {
+        type: PricingType.STANDARD,
+        pricePerHour: { toString: () => '100000' },
+        increasePercent: null,
+        weekday: null,
+        startsAt: '06:00',
+        endsAt: '23:00',
+      },
+      {
+        type: PricingType.WEEKEND,
+        pricePerHour: null,
+        increasePercent: 10,
+        weekday: null,
+        startsAt: '06:00',
+        endsAt: '23:00',
+      },
+    ] as never);
+
+    await expect(service.quoteHourlyPrice('court-1', 2, '19:00')).resolves.toEqual({
+      weekday: 2,
+      time: '19:00',
+      basePricePerHour: 100000,
+      increasePercent: 0,
+      pricePerHour: 100000,
+    });
+  });
+
+  it('accepts a zero standard hourly price', async () => {
+    const { service, prismaMock } = createHarness();
+    prismaMock.court.findFirst.mockResolvedValue({ id: 'court-1' });
+    prismaMock.pricingRule.findMany.mockResolvedValue([
+      {
+        type: PricingType.STANDARD,
+        pricePerHour: { toString: () => '0' },
+        increasePercent: null,
+        weekday: null,
+        startsAt: '06:00',
+        endsAt: '23:00',
+      },
+    ] as never);
+
+    await expect(service.quoteHourlyPrice('court-1', 2, '10:00')).resolves.toEqual({
+      weekday: 2,
+      time: '10:00',
+      basePricePerHour: 0,
+      increasePercent: 0,
+      pricePerHour: 0,
+    });
   });
 
   it('returns not found when deleting a pricing rule on another court', async () => {

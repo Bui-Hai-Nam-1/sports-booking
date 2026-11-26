@@ -95,15 +95,16 @@ model VenueOpeningHour {
 }
 
 model PricingRule {
-  id           String      @id @default(cuid())
-  type         PricingType
-  pricePerHour Decimal     @db.Decimal(12, 2)
-  weekday      Int?
-  startsAt     String
-  endsAt       String
-  courtId      String
-  court        Court       @relation(fields: [courtId], references: [id], onDelete: Cascade)
-  createdAt    DateTime    @default(now())
+  id              String      @id @default(cuid())
+  type            PricingType
+  pricePerHour    Decimal?    @db.Decimal(12, 2)
+  increasePercent Int?
+  weekday         Int?
+  startsAt        String
+  endsAt          String
+  courtId         String
+  court           Court       @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  createdAt       DateTime    @default(now())
 
   @@index([courtId, type, weekday])
 }

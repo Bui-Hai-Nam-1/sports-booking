@@ -5,6 +5,7 @@ import {
   IsArray,
   IsBoolean,
   IsInt,
+  IsNumber,
   IsOptional,
   IsString,
   Matches,
@@ -49,6 +50,22 @@ export class CreateVenueDto {
   @ArrayMaxSize(10)
   @IsString({ each: true })
   sportTypes!: string[];
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  initialCourtPricePerHour?: number;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/)
+  initialPriceStartsAt?: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/)
+  initialPriceEndsAt?: string;
 }
 
 export class UpdateVenueDto {
